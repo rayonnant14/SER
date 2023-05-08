@@ -1,7 +1,11 @@
 import torch
 import torch.nn as nn
-
 import torch.nn.functional as F
+
+from typing import Optional
+from typing import Tuple
+from typing import Union
+
 
 class CausalConv1d(nn.Conv1d):
     def __init__(self,
@@ -29,6 +33,30 @@ class CausalConv1d(nn.Conv1d):
         return super(CausalConv1d, self).forward(F.pad(input, (self.__padding, 0)))
 
 
+class SpatialDropout(torch.nn.Module):
+    """Spatial dropout module.
+
+    Apply dropout to full channels on tensors of input (B, C, D)
+    """
+
+    def __init__(
+        self,
+        dropout_probability: float = 0.15,
+        shape: Optional[Union[tuple, list]] = None,
+    ):
+        super().__init__()
+        if shape is None:
+            shape = (0, 2, 1)
+        self.dropout = nn.Dropout2d(dropout_probability)
+        self.shape = (shape,)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward of spatial dropout module."""
+        y = x.permute(*self.shape)
+        y = self.dropout(y)
+        return y.permute(*self.shape)
+
+
 class Temporal_Aware_Block(nn.Module):
     def __init__(self, s, i, nb_filters, kernel_size, dropout_rate=0):
         super(Temporal_Aware_Block, self).__init__()
@@ -42,26 +70,19 @@ class Temporal_Aware_Block(nn.Module):
             CausalConv1d(in_channels=self.nb_filters, out_channels=self.nb_filters,
                          kernel_size=self.kernel_size, dilation=self.i),
             nn.BatchNorm1d(num_features=self.nb_filters),
-            nn.ReLU())
-        self.spatial_dropout_1 = nn.Dropout2d(p=self.dropout_rate)
+            nn.ReLU(),
+            SpatialDropout(dropout_probability=self.dropout_rate))
         self.block_2 = nn.Sequential(
             CausalConv1d(in_channels=self.nb_filters, out_channels=self.nb_filters,
                          kernel_size=self.kernel_size, dilation=self.i),
             nn.BatchNorm1d(num_features=self.nb_filters),
-            nn.ReLU())
-        self.spatial_dropout_2 = nn.Dropout2d(p=self.dropout_rate)
+            nn.ReLU(),
+            SpatialDropout(dropout_probability=self.dropout_rate))
 
     def forward(self, x):
         original_x = x
-        block_1 = self.block_1(x)
-        block_1 = block_1.permute(0, 2, 1)
-        block_1 = self.spatial_dropout_1(block_1)
-        output_1 = block_1.permute(0, 2, 1)
-
-        block_2 = self.block_2(output_1)
-        block_2 = block_2.permute(0, 2, 1)
-        block_2 = self.spatial_dropout_2(block_2)
-        output_2 = block_2.permute(0, 2, 1)
+        output_1 = self.block_1(x)
+        output_2 = self.block_2(output_1)
         output = torch.sigmoid(output_2)
         F_x = torch.mul(original_x, output)
         return F_x
@@ -78,9 +99,6 @@ class TIMNET(nn.Module):
         self.nb_stacks = nb_stacks
         self.kernel_size = kernel_size
         self.nb_filters = nb_filters
-
-        self.supports_masking = True
-        self.mask_value = 0
 
         self.forward_convd = nn.Conv1d(in_channels=nb_filters, out_channels=self.nb_filters, kernel_size=1, dilation=1,
                                        padding=0)
