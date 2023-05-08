@@ -8,15 +8,16 @@ from typing import Union
 
 
 class CausalConv1d(nn.Conv1d):
-    def __init__(self,
-                 in_channels,
-                 out_channels,
-                 kernel_size,
-                 stride=1,
-                 dilation=1,
-                 groups=1,
-                 bias=True):
-
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        kernel_size,
+        stride=1,
+        dilation=1,
+        groups=1,
+        bias=True,
+    ):
         super(CausalConv1d, self).__init__(
             in_channels,
             out_channels,
@@ -25,12 +26,15 @@ class CausalConv1d(nn.Conv1d):
             padding=0,
             dilation=dilation,
             groups=groups,
-            bias=bias)
+            bias=bias,
+        )
 
         self.__padding = (kernel_size - 1) * dilation
 
     def forward(self, input):
-        return super(CausalConv1d, self).forward(F.pad(input, (self.__padding, 0)))
+        return super(CausalConv1d, self).forward(
+            F.pad(input, (self.__padding, 0))
+        )
 
 
 class SpatialDropout(torch.nn.Module):
@@ -67,17 +71,27 @@ class Temporal_Aware_Block(nn.Module):
         self.kernel_size = kernel_size
         self.dropout_rate = dropout_rate
         self.block_1 = nn.Sequential(
-            CausalConv1d(in_channels=self.nb_filters, out_channels=self.nb_filters,
-                         kernel_size=self.kernel_size, dilation=self.i),
+            CausalConv1d(
+                in_channels=self.nb_filters,
+                out_channels=self.nb_filters,
+                kernel_size=self.kernel_size,
+                dilation=self.i,
+            ),
             nn.BatchNorm1d(num_features=self.nb_filters),
             nn.ReLU(),
-            SpatialDropout(dropout_probability=self.dropout_rate))
+            SpatialDropout(dropout_probability=self.dropout_rate),
+        )
         self.block_2 = nn.Sequential(
-            CausalConv1d(in_channels=self.nb_filters, out_channels=self.nb_filters,
-                         kernel_size=self.kernel_size, dilation=self.i),
+            CausalConv1d(
+                in_channels=self.nb_filters,
+                out_channels=self.nb_filters,
+                kernel_size=self.kernel_size,
+                dilation=self.i,
+            ),
             nn.BatchNorm1d(num_features=self.nb_filters),
             nn.ReLU(),
-            SpatialDropout(dropout_probability=self.dropout_rate))
+            SpatialDropout(dropout_probability=self.dropout_rate),
+        )
 
     def forward(self, x):
         original_x = x
@@ -89,10 +103,15 @@ class Temporal_Aware_Block(nn.Module):
 
 
 class TIMNET(nn.Module):
-    def __init__(self, nb_filters=39, kernel_size=2, nb_stacks=1,
-                 dilations=8, dropout_rate=0.1,
-                 class_num=8):
-
+    def __init__(
+        self,
+        nb_filters=39,
+        kernel_size=2,
+        nb_stacks=1,
+        dilations=8,
+        dropout_rate=0.1,
+        class_num=8,
+    ):
         super(TIMNET, self).__init__()
         self.dropout_rate = dropout_rate
         self.dilations = dilations
@@ -100,27 +119,50 @@ class TIMNET(nn.Module):
         self.kernel_size = kernel_size
         self.nb_filters = nb_filters
 
-        self.forward_convd = nn.Conv1d(in_channels=nb_filters, out_channels=self.nb_filters, kernel_size=1, dilation=1,
-                                       padding=0)
-        self.backward_convd = nn.Conv1d(in_channels=nb_filters, out_channels=self.nb_filters, kernel_size=1, dilation=1,
-                                        padding=0)
+        self.forward_convd = nn.Conv1d(
+            in_channels=nb_filters,
+            out_channels=self.nb_filters,
+            kernel_size=1,
+            dilation=1,
+            padding=0,
+        )
+        self.backward_convd = nn.Conv1d(
+            in_channels=nb_filters,
+            out_channels=self.nb_filters,
+            kernel_size=1,
+            dilation=1,
+            padding=0,
+        )
         self.skip_out_forwards = nn.Sequential()
         self.skip_out_backwards = nn.Sequential()
         for s in range(self.nb_stacks):
-            for i in [2 ** i for i in range(self.dilations)]:
-                self.skip_out_forwards.append(Temporal_Aware_Block(s, i,
-                                                                   self.nb_filters, self.kernel_size,
-                                                                   self.dropout_rate))
-                self.skip_out_backwards.append(Temporal_Aware_Block(s, i,
-                                                                    self.nb_filters, self.kernel_size,
-                                                                    self.dropout_rate))
+            for i in [2**i for i in range(self.dilations)]:
+                self.skip_out_forwards.append(
+                    Temporal_Aware_Block(
+                        s,
+                        i,
+                        self.nb_filters,
+                        self.kernel_size,
+                        self.dropout_rate,
+                    )
+                )
+                self.skip_out_backwards.append(
+                    Temporal_Aware_Block(
+                        s,
+                        i,
+                        self.nb_filters,
+                        self.kernel_size,
+                        self.dropout_rate,
+                    )
+                )
         self.pooling = nn.Sequential()
         for i in range(self.dilations):
             self.pooling.append(nn.AdaptiveAvgPool1d(1))
         self.flatten_1 = nn.Flatten(start_dim=-2, end_dim=-1)
 
         self.weight_layer = nn.Conv1d(
-            in_channels=self.dilations, out_channels=1, kernel_size=1)
+            in_channels=self.dilations, out_channels=1, kernel_size=1
+        )
         self.flatten_2 = nn.Flatten(start_dim=-2, end_dim=-1)
         self.fc = nn.Linear(nb_filters, class_num)
         # self.softmax = nn.Softmax(dim=1)
@@ -137,7 +179,7 @@ class TIMNET(nn.Module):
         skip_out_forward = forward_convd
         skip_out_backward = backward_convd
 
-        for idx, i in enumerate([2 ** i for i in range(self.dilations)]):
+        for idx, i in enumerate([2**i for i in range(self.dilations)]):
             skip_out_forward = self.skip_out_forwards[idx](skip_out_forward)
             skip_out_backward = self.skip_out_backwards[idx](skip_out_backward)
 
