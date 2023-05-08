@@ -2,12 +2,15 @@ import torch
 from trainer import TrainerClassification
 from models import TIMNET
 import data
+import argparse
 
+parser = argparse.ArgumentParser()
+parser.add_argument('--dataset_path', type=str, default="SAVEE.npy")
 
 def main():
-
     model = TIMNET()
-    dataset_path = '/Users/polina/Documents/diploma_2023/SAVEE/features/SAVEE.npy'
+    args = parser.parse_args()
+    dataset_path = args.dataset_path
     train_dataloader, val_dataloader = data.load_dataset(dataset_path)
     optimizer = torch.optim.Adam(
         model.parameters(), lr=0.001, betas=(0.93, 0.98))
