@@ -70,8 +70,8 @@ class EvaluatorClassification:
                 target_names=self.dataset_description["target_names"],
             )
         )
-        war = recall_score(targets, outputs, average="weighted")
-        uar = accuracy_score(targets, outputs)
+        uar = recall_score(targets, outputs, average='macro')
+        war = accuracy_score(targets, outputs)
         return {'WAR': war, 'UAR': uar}
 
     def evaluate(self):

@@ -21,7 +21,8 @@ class TrainerClassification(ABC):
         dataset_name: str,
         model_class: nn.Module,
         batch_size: int,
-        optimizer,
+        optimizer_func,
+        optimizer_parameters,
         criterion,
         num_epochs: int,
         save_path: str,
@@ -32,7 +33,8 @@ class TrainerClassification(ABC):
         self.model_class = model_class
         self.batch_size = batch_size
         self.device = device
-        self.optimizer = optimizer
+        self.optimizer_func = optimizer_func
+        self.optimizer_parameters = optimizer_parameters
         self.criterion = criterion
         self.epochs = num_epochs
         self.best_accuracy = 0.0
@@ -60,8 +62,6 @@ class TrainerClassification(ABC):
         out = model.forward(images)
         loss = self.criterion(out, labels)
         loss.backward()
-        self.optimizer.step()
-        self.optimizer.zero_grad()
         return loss
 
     def validation_step(self, model, batch):
@@ -121,11 +121,14 @@ class TrainerClassification(ABC):
                 model = self.load_model()
                 model.to(self.device)
 
+                optimizer = self.optimizer_func(model.parameters(), **self.optimizer_parameters)
                 for epoch in range(self.epochs):
                     self.train_mode_on(model)
                     train_losses = []
                     for batch in train_loader:
                         loss = self.training_step(model, batch)
+                        optimizer.step()
+                        optimizer.zero_grad()
                         train_losses.append(loss)
 
                     result = self.evaluate(model, val_loader)
