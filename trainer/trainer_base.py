@@ -9,7 +9,9 @@ from sklearn.model_selection import KFold
 from utils.metrics import accuracy
 from utils.misc import check_if_exist
 
-from models.timnet import TIMNET
+from data.datasets import DATASETS
+
+from tqdm import tqdm
 
 
 class TrainerClassification(ABC):
@@ -17,15 +19,17 @@ class TrainerClassification(ABC):
         self,
         dataset: torch.utils.data.Dataset,
         dataset_name: str,
+        model_class: nn.Module,
         batch_size: int,
         optimizer,
         criterion,
         num_epochs: int,
         save_path: str,
-        random_state=42,
         device=None,
     ):
         self.dataset = dataset
+        self.dataset_description = DATASETS[dataset_name]
+        self.model_class = model_class
         self.batch_size = batch_size
         self.device = device
         self.optimizer = optimizer
@@ -38,11 +42,17 @@ class TrainerClassification(ABC):
         check_if_exist(save_path + "/" + dataset_name)
         self.save_path = save_path + "/" + dataset_name + "/"
 
-    # @abstractmethod
     def load_model(self):
-        model = TIMNET(class_num=7)
+        model = self.model_class(
+            class_num=self.dataset_description["num_classes"]
+        )
         return model
-        # return NotImplementedError
+    
+    def train_mode_on(self, model):
+        model.train()
+
+    def eval_mode_on(self, model):
+        model.eval()
 
     def training_step(self, model, batch):
         images, labels = batch
@@ -73,12 +83,6 @@ class TrainerClassification(ABC):
             )
         )
 
-    def train_mode_on(self, model):
-        model.train()
-
-    def eval_mode_on(self, model):
-        model.eval()
-
     def save_best_model(self, model, val_accuracy, fold):
         if val_accuracy > self.best_accuracy:
             torch.save(
@@ -96,30 +100,40 @@ class TrainerClassification(ABC):
         splits = KFold(
             n_splits=self.n_splits, shuffle=True, random_state=self.random_state
         )
-        for fold, (train_idx, val_idx) in enumerate(
-            splits.split(np.arange(len(self.dataset)))
-        ):
-            history = []
-            train_sampler = SubsetRandomSampler(train_idx)
-            test_sampler = SubsetRandomSampler(val_idx)
-            train_loader = DataLoader(
-                self.dataset, batch_size=self.batch_size, sampler=train_sampler
-            )
-            val_loader = DataLoader(
-                self.dataset, batch_size=self.batch_size, sampler=test_sampler
-            )
-            model = self.load_model()
-            model.to(self.device)
-            for epoch in range(self.epochs):
-                self.train_mode_on(model)
-                train_losses = []
-                for batch in train_loader:
-                    loss = self.training_step(model, batch)
-                    train_losses.append(loss)
+        with tqdm(total=self.n_splits) as pbar:
+            for fold, (train_idx, val_idx) in enumerate(
+                splits.split(np.arange(len(self.dataset)))
+            ):
+                print(f"Process fold {fold}")
+                history = []
+                train_sampler = SubsetRandomSampler(train_idx)
+                val_sampler = SubsetRandomSampler(val_idx)
+                train_loader = DataLoader(
+                    self.dataset,
+                    batch_size=self.batch_size,
+                    sampler=train_sampler,
+                )
+                val_loader = DataLoader(
+                    self.dataset,
+                    batch_size=self.batch_size,
+                    sampler=val_sampler,
+                )
+                model = self.load_model()
+                model.to(self.device)
 
-                result = self.evaluate(model, val_loader)
-                result["train_loss"] = torch.stack(train_losses).mean().item()
-                self.epoch_end(epoch, result)
-                self.save_best_model(model, result["val_acc"], fold)
-                history.append(result)
-            # yield history
+                for epoch in range(self.epochs):
+                    self.train_mode_on(model)
+                    train_losses = []
+                    for batch in train_loader:
+                        loss = self.training_step(model, batch)
+                        train_losses.append(loss)
+
+                    result = self.evaluate(model, val_loader)
+                    result["train_loss"] = (
+                        torch.stack(train_losses).mean().item()
+                    )
+                    self.epoch_end(epoch, result)
+                    self.save_best_model(model, result["val_acc"], fold)
+                    history.append(result)
+                pbar.update(1)
+                # yield history
