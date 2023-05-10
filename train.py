@@ -24,20 +24,19 @@ def main():
     num_epochs = args.num_epochs
 
     dataset = load_dataset(dataset_path)
-
-    model_parameters = TIMNET(DATASETS[dataset_name]['num_classes']).parameters()
-    optimizer = torch.optim.Adam(
-        model_parameters, lr=0.001, betas=(0.93, 0.98)
-    )
-    criterion = torch.nn.CrossEntropyLoss()
     
+    optimizer_func = torch.optim.Adam
+    optimizer_parameters = {"lr": 0.001, "betas": (0.93, 0.98)}
+    criterion = torch.nn.CrossEntropyLoss()
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
     trainer = TrainerClassification(
         dataset=dataset,
         dataset_name=dataset_name,
         model_class=TIMNET,
         batch_size=64,
-        optimizer=optimizer,
+        optimizer_func=optimizer_func,
+        optimizer_parameters=optimizer_parameters,
         criterion=criterion,
         num_epochs=num_epochs,
         save_path=save_path,
@@ -54,6 +53,7 @@ def main():
         device=device,
     )
     evaluator.evaluate()
+
 
 if __name__ == "__main__":
     main()
