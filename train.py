@@ -27,7 +27,7 @@ def main():
 
     optimizer_func = torch.optim.Adam
     optimizer_parameters = {"lr": 0.001, "betas": (0.93, 0.98)}
-    criterion = torch.nn.CrossEntropyLoss()
+    criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.1)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     trainer = TrainerClassification(
