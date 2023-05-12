@@ -104,5 +104,5 @@ class EvaluatorClassification:
         average_WAR_perc = average_WAR * 100.0
         average_UAR_perc = average_UAR * 100.0
         print(
-            f"average_WAR: {average_WAR_perc:.2f} %, average_UAR: {average_UAR_perc:.2f} %"
+            f"average_UAR: {average_UAR_perc:.2f} %, average_WAR: {average_WAR_perc:.2f} %",
         )
