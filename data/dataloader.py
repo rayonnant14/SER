@@ -16,10 +16,10 @@ class SERDataset(Dataset):
         self.transform = transform
 
     def __len__(self):
-        return len(self.data["x_mfcc"])
+        return len(self.data["x"])
 
     def __getitem__(self, idx):
-        x = torch.from_numpy(self.data["x_mfcc"][idx].transpose())
+        x = torch.from_numpy(self.data["x"][idx].transpose())
         y = torch.from_numpy(self.data["y"][idx]).argmax()
         return x, y
 

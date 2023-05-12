@@ -49,7 +49,7 @@ class TrainerClassification(ABC):
             class_num=self.dataset_description["num_classes"]
         )
         return model
-    
+
     def train_mode_on(self, model):
         model.train()
 
@@ -85,6 +85,7 @@ class TrainerClassification(ABC):
 
     def save_best_model(self, model, val_accuracy, fold):
         if val_accuracy > self.best_accuracy:
+            self.best_accuracy = val_accuracy
             torch.save(
                 model.state_dict(),
                 self.save_path + "timnet_" + str(fold) + ".pth",
@@ -105,6 +106,7 @@ class TrainerClassification(ABC):
                 splits.split(np.arange(len(self.dataset)))
             ):
                 print(f"Process fold {fold}")
+                self.best_accuracy = 0.0
                 history = []
                 train_sampler = SubsetRandomSampler(train_idx)
                 val_sampler = SubsetRandomSampler(val_idx)
@@ -121,7 +123,9 @@ class TrainerClassification(ABC):
                 model = self.load_model()
                 model.to(self.device)
 
-                optimizer = self.optimizer_func(model.parameters(), **self.optimizer_parameters)
+                optimizer = self.optimizer_func(
+                    model.parameters(), **self.optimizer_parameters
+                )
                 for epoch in range(self.epochs):
                     self.train_mode_on(model)
                     train_losses = []
