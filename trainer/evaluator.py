@@ -56,6 +56,7 @@ class EvaluatorClassification:
         preds_all = []
         for batch in val_loader:
             labels, preds = self.infer_model(model, batch)
+            labels = labels.cpu().detach().numpy()
             preds = torch.argmax(preds, dim=1).cpu().detach().numpy()
             labels_all.append(labels)
             preds_all.append(preds)
