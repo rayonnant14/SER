@@ -7,8 +7,6 @@ from torch.utils.data import DataLoader, SubsetRandomSampler
 from sklearn.model_selection import KFold
 
 from utils.metrics import accuracy
-from sklearn.metrics import recall_score, accuracy_score
-
 from utils.misc import check_if_exist
 
 from data.datasets import DATASETS
@@ -51,7 +49,7 @@ class TrainerClassification(ABC):
             class_num=self.dataset_description["num_classes"]
         )
         return model
-    
+
     def train_mode_on(self, model):
         model.train()
 
@@ -125,7 +123,9 @@ class TrainerClassification(ABC):
                 model = self.load_model()
                 model.to(self.device)
 
-                optimizer = self.optimizer_func(model.parameters(), **self.optimizer_parameters)
+                optimizer = self.optimizer_func(
+                    model.parameters(), **self.optimizer_parameters
+                )
                 for epoch in range(self.epochs):
                     self.train_mode_on(model)
                     train_losses = []
