@@ -39,7 +39,6 @@ class EvaluatorClassification:
 
     def load_model_weights(self, model, fold):
         model_path = self.save_path + "timnet_" + str(fold) + ".pth"
-        print(model_path)
         model.load_state_dict(torch.load(model_path))
 
     def eval_mode_on(self, model):
@@ -49,30 +48,29 @@ class EvaluatorClassification:
         images, labels = batch
         images, labels = images.to(self.device), labels.to(self.device)
         out = model.forward(images)
-        return out
+        return labels, out
 
     @torch.no_grad()
     def evaluate_model(self, model, val_loader):
-        outputs = [
-            torch.argmax(self.infer_model(model, batch), dim=1)
-            .cpu()
-            .detach()
-            .numpy()
-            for batch in val_loader
-        ]
-        outputs = np.concatenate(outputs, axis=0)
-        targets = [batch[1].cpu().detach().numpy() for batch in val_loader]
-        targets = np.concatenate(targets, axis=0)
+        labels_all = []
+        preds_all = []
+        for batch in val_loader:
+            labels, preds = self.infer_model(model, batch)
+            preds = torch.argmax(preds, dim=1).cpu().detach().numpy()
+            labels_all.append(labels)
+            preds_all.append(preds)
+        labels_all = np.concatenate(labels_all, axis=0)
+        preds_all = np.concatenate(preds_all, axis=0)
         print(
             classification_report(
-                targets,
-                outputs,
+                labels_all,
+                preds_all,
                 target_names=self.dataset_description["target_names"],
             )
         )
-        uar = recall_score(targets, outputs, average='macro')
-        war = accuracy_score(targets, outputs)
-        return {'WAR': war, 'UAR': uar}
+        uar = recall_score(labels_all, preds_all, average="macro")
+        war = accuracy_score(labels_all, preds_all)
+        return {"WAR": war, "UAR": uar}
 
     def evaluate(self):
         splits = KFold(
@@ -93,13 +91,15 @@ class EvaluatorClassification:
                 )
                 model = self.load_model()
                 self.load_model_weights(model, fold)
-                model.to(self.device)
                 self.eval_mode_on(model)
+                model.to(self.device)
                 metrics = self.evaluate_model(model, val_loader)
-                average_WAR += metrics['WAR']
-                average_UAR += metrics['UAR']
+                average_WAR += metrics["WAR"]
+                average_UAR += metrics["UAR"]
                 pbar.update(1)
                 # yield history
         average_WAR /= self.n_splits
         average_UAR /= self.n_splits
-        print(f'average_WAR: {average_WAR}, average_UAR: {average_UAR}')
+        average_WAR_perc = average_WAR * 100.0
+        average_UAR_perc = average_UAR * 100.0
+        print(f"average_WAR: {average_WAR_perc:.2f} %, average_UAR: {average_UAR_perc:.2f} %")

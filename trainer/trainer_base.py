@@ -7,6 +7,8 @@ from torch.utils.data import DataLoader, SubsetRandomSampler
 from sklearn.model_selection import KFold
 
 from utils.metrics import accuracy
+from sklearn.metrics import recall_score, accuracy_score
+
 from utils.misc import check_if_exist
 
 from data.datasets import DATASETS
@@ -85,6 +87,7 @@ class TrainerClassification(ABC):
 
     def save_best_model(self, model, val_accuracy, fold):
         if val_accuracy > self.best_accuracy:
+            self.best_accuracy = val_accuracy
             torch.save(
                 model.state_dict(),
                 self.save_path + "timnet_" + str(fold) + ".pth",
@@ -105,6 +108,7 @@ class TrainerClassification(ABC):
                 splits.split(np.arange(len(self.dataset)))
             ):
                 print(f"Process fold {fold}")
+                self.best_accuracy = 0.0
                 history = []
                 train_sampler = SubsetRandomSampler(train_idx)
                 val_sampler = SubsetRandomSampler(val_idx)
