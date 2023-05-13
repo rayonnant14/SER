@@ -3,7 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from typing import Optional
-from typing import Tuple
 from typing import Union
 
 
@@ -63,10 +62,9 @@ class SpatialDropout(torch.nn.Module):
 
 class Temporal_Aware_Block(nn.Module):
     def __init__(self, s, i, nb_filters, kernel_size, dropout_rate=0):
-        super(Temporal_Aware_Block, self).__init__()
+        super().__init__()
         self.s = s
         self.i = i
-        # self.activation = nn.ReLU()
         self.nb_filters = nb_filters
         self.kernel_size = kernel_size
         self.dropout_rate = dropout_rate
@@ -105,12 +103,12 @@ class Temporal_Aware_Block(nn.Module):
 class TIMNET(nn.Module):
     def __init__(
         self,
+        class_num,
         nb_filters=39,
         kernel_size=2,
         nb_stacks=1,
         dilations=8,
         dropout_rate=0.1,
-        class_num=8,
     ):
         super(TIMNET, self).__init__()
         self.dropout_rate = dropout_rate
