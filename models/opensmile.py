@@ -4,6 +4,7 @@ class OpenSmileClassification(nn.Module):
     def __init__(
         self,
         class_num,
+        dropout_rate = 0.1,
         opensmile_features_num=988,
     ):
         super().__init__()
@@ -11,11 +12,13 @@ class OpenSmileClassification(nn.Module):
         self.layers = nn.Sequential(
             nn.Linear(self.opensmile_features_num, self.opensmile_features_num),
             nn.ReLU(),
+            nn.Dropout1d(dropout_rate),
             nn.BatchNorm1d(num_features=self.opensmile_features_num),
             nn.Linear(
                 self.opensmile_features_num, self.opensmile_features_num // 2
             ),
             nn.ReLU(),
+            nn.Dropout1d(dropout_rate),
             nn.BatchNorm1d(num_features=self.opensmile_features_num // 2),
         )
 
