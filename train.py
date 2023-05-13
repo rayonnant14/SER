@@ -14,6 +14,7 @@ parser.add_argument("--dataset_path", type=str, default="SAVEE.npy")
 parser.add_argument("--dataset_name", type=str, default="SAVEE")
 parser.add_argument("--save_path", type=str, default="checkpoints/")
 parser.add_argument("--num_epochs", type=int, default=20)
+parser.add_argument('--label_smoothing', action='store_true')
 
 
 def main():
@@ -22,12 +23,15 @@ def main():
     dataset_name = args.dataset_name
     save_path = args.save_path
     num_epochs = args.num_epochs
-
+    label_smoothing = args.label_smoothing
     dataset = load_dataset(dataset_path)
 
     optimizer_func = torch.optim.Adam
     optimizer_parameters = {"lr": 0.001, "betas": (0.93, 0.98)}
-    criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.1)
+    if label_smoothing:
+        criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.1)
+    else:
+        criterion = torch.nn.CrossEntropyLoss()
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     trainer = TrainerClassification(
