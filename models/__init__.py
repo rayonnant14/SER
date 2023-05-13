@@ -1,2 +1,3 @@
 from .timnet import *
-from .timnet_opensmile import *
+from .two_branches import *
+from .opensmile import *

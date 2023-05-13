@@ -32,11 +32,11 @@ def main():
     else:
         criterion = torch.nn.CrossEntropyLoss()
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
+    model_class = TIMNET
     trainer = TrainerClassification(
         dataset=dataset,
         dataset_name=dataset_name,
-        model_class=TIMNET,
+        model_class=model_class,
         batch_size=64,
         optimizer_func=optimizer_func,
         optimizer_parameters=optimizer_parameters,
@@ -50,7 +50,7 @@ def main():
     evaluator = EvaluatorClassification(
         dataset=dataset,
         dataset_name=dataset_name,
-        model_class=TIMNET,
+        model_class=model_class,
         batch_size=64,
         save_path=save_path,
         device=device,

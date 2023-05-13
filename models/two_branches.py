@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from models import Temporal_Aware_Block
 
 
-class TIMNET_OpenSmile(nn.Module):
+class TwoBranches(nn.Module):
     def __init__(
         self,
         class_num,

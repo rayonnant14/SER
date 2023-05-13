@@ -1,10 +1,10 @@
 import torch
 
-from trainer import TrainerOpenSmile
-from trainer import EvaluatorOpenSmile
-from models import OpenSmileClassification
+from trainer import TrainerTwoBranches
+from trainer import EvaluatorTwoBranches
+from models import TwoBranches
 
-from data import load_opensmile_dataset
+from data import load_two_branches_dataset 
 
 import argparse
 
@@ -13,7 +13,7 @@ parser.add_argument("--dataset_path", type=str, default="SAVEE.npy")
 parser.add_argument("--dataset_name", type=str, default="SAVEE")
 parser.add_argument("--save_path", type=str, default="checkpoints/")
 parser.add_argument("--num_epochs", type=int, default=20)
-parser.add_argument('--label_smoothing', action='store_true')
+parser.add_argument("--label_smoothing", action="store_true")
 
 
 def main():
@@ -23,7 +23,7 @@ def main():
     save_path = args.save_path
     num_epochs = args.num_epochs
     label_smoothing = args.label_smoothing
-    dataset = load_opensmile_dataset(dataset_path)
+    dataset = load_two_branches_dataset(dataset_path)
 
     optimizer_func = torch.optim.Adam
     optimizer_parameters = {"lr": 0.001, "betas": (0.93, 0.98)}
@@ -32,8 +32,8 @@ def main():
     else:
         criterion = torch.nn.CrossEntropyLoss()
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model_class = OpenSmileClassification
-    trainer = TrainerOpenSmile(
+    model_class = TwoBranches
+    trainer = TrainerTwoBranches(
         dataset=dataset,
         dataset_name=dataset_name,
         model_class=model_class,
@@ -47,7 +47,7 @@ def main():
     )
     history = trainer.fit()
 
-    evaluator = EvaluatorOpenSmile(
+    evaluator = EvaluatorTwoBranches(
         dataset=dataset,
         dataset_name=dataset_name,
         model_class=model_class,
