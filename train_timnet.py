@@ -13,6 +13,7 @@ parser.add_argument("--dataset_path", type=str, default="SAVEE.npy")
 parser.add_argument("--dataset_name", type=str, default="SAVEE")
 parser.add_argument("--save_path", type=str, default="checkpoints/")
 parser.add_argument("--num_epochs", type=int, default=20)
+parser.add_argument("--lr", type=float, default=0.001)
 parser.add_argument('--label_smoothing', action='store_true')
 
 
@@ -26,7 +27,7 @@ def main():
     dataset = load_dataset(dataset_path)
 
     optimizer_func = torch.optim.Adam
-    optimizer_parameters = {"lr": 0.001, "betas": (0.93, 0.98)}
+    optimizer_parameters = {"lr": args.lr, "betas": (0.93, 0.98)}
     if label_smoothing:
         criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.1)
     else:
