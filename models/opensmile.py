@@ -1,10 +1,11 @@
 import torch.nn as nn
 
+
 class OpenSmileClassification(nn.Module):
     def __init__(
         self,
         class_num,
-        dropout_rate = 0.1,
+        dropout_rate=0.1,
         opensmile_features_num=988,
     ):
         super().__init__()
@@ -21,7 +22,25 @@ class OpenSmileClassification(nn.Module):
             nn.Dropout1d(dropout_rate),
             nn.BatchNorm1d(num_features=self.opensmile_features_num // 2),
         )
-
+        # self.layers = nn.Sequential(
+        #     nn.Conv1d(
+        #         1,
+        #         1,
+        #         kernel_size=1,
+        #     ),
+        #     nn.ReLU(),
+        #     nn.Dropout1d(dropout_rate),
+        #     nn.BatchNorm1d(num_features=1),
+        #     nn.Conv1d(
+        #         1,
+        #         1,
+        #         kernel_size=1,
+        #     ),
+        #     nn.ReLU(),
+        #     nn.Dropout1d(dropout_rate),
+        #     nn.BatchNorm1d(num_features=1),
+        # )
+        
         self.classification = nn.Sequential(
             nn.Linear(self.opensmile_features_num // 2, self.opensmile_features_num // 4),
             nn.ReLU(),

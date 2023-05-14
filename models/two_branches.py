@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from models import Temporal_Aware_Block
+from models import ConcatinationBasedFusion, WightedSumBasedFusion
 
 
 class TwoBranches(nn.Module):
@@ -83,11 +84,10 @@ class TwoBranches(nn.Module):
             nn.BatchNorm1d(num_features=self.opensmile_features_num // 2),
         )
 
-        total_embedding_size = nb_filters + opensmile_features_num // 2
-        self.classification = nn.Sequential(
-            nn.Linear(total_embedding_size, total_embedding_size // 4),
-            nn.ReLU(),
-            nn.Linear(total_embedding_size // 4, class_num),
+        self.fusion = WightedSumBasedFusion(
+            embedding_first_size=nb_filters,
+            embedding_second_size=opensmile_features_num // 2,
+            class_num=class_num,
         )
         # self.softmax = nn.Softmax(dim=1)
 
@@ -121,7 +121,6 @@ class TwoBranches(nn.Module):
         # Second Branch
         output_second_branch = self.second_branch(opensmile_x)
 
-        output = torch.cat([output_first_branch, output_second_branch], dim=1)
-        output = self.classification(output)
+        output = self.fusion(output_first_branch, output_second_branch)
         # x = self.softmax(x)
         return output
