@@ -3,7 +3,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from models import Temporal_Aware_Block
-from models import ConcatinationBasedFusion, WightedSumBasedFusion
+from models import (
+    ConcatinationBasedFusion,
+    WightedSumBasedFusion,
+    WeighedFusionV1,
+)
 
 
 class TwoBranches(nn.Module):
@@ -84,7 +88,7 @@ class TwoBranches(nn.Module):
             nn.BatchNorm1d(num_features=self.opensmile_features_num // 2),
         )
 
-        self.fusion = WightedSumBasedFusion(
+        self.fusion = WeighedFusionV1(
             embedding_first_size=nb_filters,
             embedding_second_size=opensmile_features_num // 2,
             class_num=class_num,
