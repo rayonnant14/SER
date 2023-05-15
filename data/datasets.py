@@ -48,7 +48,7 @@ DATASETS = {
             "neutral",
         ],
     },
-    "RADVESS": {
+    "RAVDESS": {
         "num_classes": 8,
         "target_names": [
             "neutral",
