@@ -28,12 +28,11 @@ class TrainerTwoBranches(TrainerClassification):
             labels.to(self.device),
         )
         out = model.forward(x, x_opensmile)
-        acc = accuracy(out, labels)
-        return {"val_acc": acc}
+        return labels, out
 
-    def save_best_model(self, model, val_accuracy, fold):
-        if val_accuracy > self.best_accuracy:
-            self.best_accuracy = val_accuracy
+    def save_best_model(self, model, val_uar, fold):
+        if val_uar > self.best_uar:
+            self.best_uar = val_uar
             torch.save(
                 model.state_dict(),
                 self.save_path + "two_branches_" + str(fold) + ".pth",

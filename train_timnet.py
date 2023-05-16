@@ -4,7 +4,7 @@ from trainer import TrainerClassification
 from trainer import EvaluatorClassification
 from models import TIMNET
 
-from data.dataloader import load_dataset
+from data import load_timnet_dataset
 
 import argparse
 
@@ -24,7 +24,7 @@ def main():
     save_path = args.save_path
     num_epochs = args.num_epochs
     label_smoothing = args.label_smoothing
-    dataset = load_dataset(dataset_path)
+    dataset = load_timnet_dataset(dataset_path)
 
     optimizer_func = torch.optim.Adam
     optimizer_parameters = {"lr": args.lr, "betas": (0.93, 0.98)}

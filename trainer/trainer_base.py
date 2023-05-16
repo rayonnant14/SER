@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader, SubsetRandomSampler
 from sklearn.model_selection import KFold
 
 from utils.metrics import accuracy
+from sklearn.metrics import recall_score, accuracy_score
 from utils.misc import check_if_exist
 
 from data.datasets import DATASETS
@@ -37,7 +38,7 @@ class TrainerClassification(ABC):
         self.optimizer_parameters = optimizer_parameters
         self.criterion = criterion
         self.epochs = num_epochs
-        self.best_accuracy = 0.0
+        self.best_uar = 0.0
         self.n_splits = 10
         self.random_state = 42
 
@@ -68,8 +69,7 @@ class TrainerClassification(ABC):
         images, labels = batch
         images, labels = images.to(self.device), labels.to(self.device)
         out = model.forward(images)
-        acc = accuracy(out, labels)
-        return {"val_acc": acc}
+        return labels, out
 
     def validation_epoch_end(self, outputs):
         batch_accs = [x["val_acc"] for x in outputs]
@@ -78,14 +78,14 @@ class TrainerClassification(ABC):
 
     def epoch_end(self, epoch, result):
         print(
-            "Epoch [{}], train_loss: {:.4f}, val_acc: {:.4f}".format(
-                epoch, result["train_loss"], result["val_acc"]
+            "Epoch [{}], train_loss: {:.4f}, val_UAR: {:.4f}, val_WAR: {:.4f}".format(
+                epoch, result["train_loss"], result["UAR"], result["WAR"]
             )
         )
 
-    def save_best_model(self, model, val_accuracy, fold):
-        if val_accuracy > self.best_accuracy:
-            self.best_accuracy = val_accuracy
+    def save_best_model(self, model, val_uar, fold):
+        if val_uar > self.best_uar:
+            self.best_uar = val_uar
             torch.save(
                 model.state_dict(),
                 self.save_path + "timnet_" + str(fold) + ".pth",
@@ -94,8 +94,21 @@ class TrainerClassification(ABC):
     @torch.no_grad()
     def evaluate(self, model, val_loader):
         self.eval_mode_on(model)
-        outputs = [self.validation_step(model, batch) for batch in val_loader]
-        return self.validation_epoch_end(outputs)
+        labels_all = []
+        preds_all = []
+        for batch in val_loader:
+            labels, preds = self.validation_step(model, batch)
+            labels = labels.cpu().detach().numpy()
+            preds = torch.argmax(preds, dim=1).cpu().detach().numpy()
+            labels_all.append(labels)
+            preds_all.append(preds)
+        labels_all = np.concatenate(labels_all, axis=0)
+        preds_all = np.concatenate(preds_all, axis=0)
+        uar = recall_score(labels_all, preds_all, average="macro")
+        war = accuracy_score(labels_all, preds_all)
+        metrics = {"WAR": war, "UAR": uar}
+        return metrics
+        # return self.validation_epoch_end(outputs)
 
     def fit(self):
         splits = KFold(
@@ -106,7 +119,7 @@ class TrainerClassification(ABC):
                 splits.split(np.arange(len(self.dataset)))
             ):
                 print(f"Process fold {fold}")
-                self.best_accuracy = 0.0
+                self.best_uar = 0.0
                 history = []
                 train_sampler = SubsetRandomSampler(train_idx)
                 val_sampler = SubsetRandomSampler(val_idx)
@@ -140,7 +153,7 @@ class TrainerClassification(ABC):
                         torch.stack(train_losses).mean().item()
                     )
                     self.epoch_end(epoch, result)
-                    self.save_best_model(model, result["val_acc"], fold)
+                    self.save_best_model(model, result["UAR"], fold)
                     history.append(result)
                 pbar.update(1)
                 # yield history

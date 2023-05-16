@@ -136,8 +136,8 @@ class WeighedFusionV2(nn.Module):
             embedding_first * weight_first_sigmoid,
             embedding_second * weight_second_sigmoid,
         )
-
-        return sum
+        output = self.classification(sum)
+        return output
 
 
 class AttentionBasedFusion(nn.Module):
