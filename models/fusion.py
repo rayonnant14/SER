@@ -34,10 +34,10 @@ class WightedSumBasedFusion(nn.Module):
         self.embedding_first_weight = embedding_first_weight
         self.embegging_second_weight = 1.0 - embedding_first_weight
         self.dim_conversion = nn.Linear(
-            self.embedding_second_size, self.embedding_first_size
+            self.embedding_first_size, self.embedding_second_size
         )
 
-        total_embedding_size = self.embedding_first_size
+        total_embedding_size = self.embedding_second_size
         self.classification = nn.Sequential(
             nn.Linear(total_embedding_size, total_embedding_size // 4),
             nn.ReLU(),
@@ -45,7 +45,7 @@ class WightedSumBasedFusion(nn.Module):
         )
 
     def forward(self, embedding_first, embedding_second):
-        embedding_second = self.dim_conversion(embedding_second)
+        embedding_first = self.dim_conversion(embedding_first)
         sum = torch.add(
             self.embedding_first_weight * embedding_first,
             self.embegging_second_weight * embedding_second,
@@ -66,12 +66,13 @@ class WeighedFusionV1(nn.Module):
         self.embedding_first_size = embedding_first_size
         self.embedding_second_size = embedding_second_size
         self.dim_conversion = nn.Linear(
-            self.embedding_second_size, self.embedding_first_size
+            self.embedding_first_size,
+            self.embedding_second_size,
         )
         self.aggregation_layer = torch.nn.Conv1d(
             in_channels=2, out_channels=1, kernel_size=1
         )
-        total_embedding_size = self.embedding_first_size
+        total_embedding_size = self.embedding_second_size
 
         self.classification = nn.Sequential(
             nn.Linear(total_embedding_size, total_embedding_size // 4),
@@ -80,14 +81,22 @@ class WeighedFusionV1(nn.Module):
         )
 
     def forward(self, embedding_first, embedding_second):
-        embedding_second = self.dim_conversion(embedding_second)
+        embedding_first = self.dim_conversion(embedding_first)
 
-        embedding_first = embedding_first.reshape(embedding_first.size(0), 1, -1)
-        embedding_second = embedding_second.reshape(embedding_second.size(0), 1, -1)
+        embedding_first = embedding_first.reshape(
+            embedding_first.size(0), 1, -1
+        )
+        embedding_second = embedding_second.reshape(
+            embedding_second.size(0), 1, -1
+        )
 
-        concat_embeddings = torch.cat([embedding_first, embedding_second], dim=1)
+        concat_embeddings = torch.cat(
+            [embedding_first, embedding_second], dim=1
+        )
         weighed_embeggings = self.aggregation_layer(concat_embeddings)
-        weighed_embeggings = weighed_embeggings.reshape(weighed_embeggings.size(0), -1)
+        weighed_embeggings = weighed_embeggings.reshape(
+            weighed_embeggings.size(0), -1
+        )
         output = self.classification(weighed_embeggings)
         return output
 
@@ -103,10 +112,13 @@ class WeighedFusionV2(nn.Module):
         self.embedding_first_size = embedding_first_size
         self.embedding_second_size = embedding_second_size
         self.dim_conversion = nn.Linear(
-            self.embedding_second_size, self.embedding_first_size
+            self.embedding_first_size,
+            self.embedding_second_size,
         )
+        self.weight_first = nn.Parameter(torch.randn(self.embedding_second_size))
+        self.weight_second = nn.Parameter(torch.randn(self.embedding_second_size))
 
-        total_embedding_size = self.embedding_first_size
+        total_embedding_size = self.embedding_second_size
 
         self.classification = nn.Sequential(
             nn.Linear(total_embedding_size, total_embedding_size // 4),
@@ -115,7 +127,17 @@ class WeighedFusionV2(nn.Module):
         )
 
     def forward(self, embedding_first, embedding_second):
-        return
+        embedding_first = self.dim_conversion(embedding_first)
+
+        weight_first_sigmoid = self.weight_first.sigmoid()
+        weight_second_sigmoid = self.weight_second.sigmoid()
+
+        sum = torch.add(
+            embedding_first * weight_first_sigmoid,
+            embedding_second * weight_second_sigmoid,
+        )
+
+        return sum
 
 
 class AttentionBasedFusion(nn.Module):
