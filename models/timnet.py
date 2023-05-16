@@ -50,7 +50,7 @@ class SpatialDropout(torch.nn.Module):
         super().__init__()
         if shape is None:
             shape = (0, 2, 1)
-        self.dropout = nn.Dropout2d(dropout_probability)
+        self.dropout = nn.Dropout1d(dropout_probability)
         self.shape = (shape,)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
