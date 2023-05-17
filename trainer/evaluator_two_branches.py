@@ -22,7 +22,8 @@ class EvaluatorTwoBranches(EvaluatorClassification):
         model.load_state_dict(torch.load(model_path))
 
     def process_dataloader(self, train_loader, val_loader):
-        train_loader, val_loader = self.apply_pca(train_loader, val_loader)
+        if self.with_pca:
+            train_loader, val_loader = self.apply_pca(train_loader, val_loader)
         return train_loader, val_loader
 
     def infer_model(self, model, batch):

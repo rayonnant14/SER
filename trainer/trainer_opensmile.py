@@ -19,7 +19,8 @@ class TrainerOpenSmile(TrainerClassification):
         return model
 
     def process_dataloader(self, train_loader, val_loader):
-        train_loader, val_loader = self.apply_pca(train_loader, val_loader)
+        if self.with_pca:
+            train_loader, val_loader = self.apply_pca(train_loader, val_loader)
         return train_loader, val_loader
 
     def save_best_model(self, model, val_uar, fold):
@@ -36,7 +37,7 @@ class TrainerOpenSmile(TrainerClassification):
 
         x_opensmile_train = x_opensmile_train.view(-1, 988).numpy()
         x_opensmile_val = x_opensmile_val.view(-1, 988).numpy()
-        
+
         scaler = preprocessing.StandardScaler()
         x_opensmile_train = scaler.fit_transform(x_opensmile_train)
         x_opensmile_val = scaler.transform(x_opensmile_val)
