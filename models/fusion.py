@@ -220,7 +220,7 @@ class AttentionBasedFusion(nn.Module):
         return output
 
 
-class LateFusion(nn.Module):
+class LateFusionV1(nn.Module):
     def __init__(
         self,
         embedding_first_size,
@@ -228,23 +228,22 @@ class LateFusion(nn.Module):
         class_num,
     ):
         super().__init__()
-        self.classification_first_branch = nn.Linear(embedding_first_size, class_num)
+        self.classification_first_branch = nn.Linear(
+            embedding_first_size, class_num
+        )
         self.classification_second_branch = nn.Sequential(
             nn.Linear(embedding_second_size, embedding_second_size // 4),
             nn.ReLU(),
             nn.Linear(embedding_second_size // 4, class_num),
         )
-        self.weight_first = nn.Parameter(
-            torch.randn(class_num)
-        )
-        self.weight_second = nn.Parameter(
-            torch.randn(class_num)
-        )
-        
+        self.weight_first = nn.Parameter(torch.randn(class_num))
+        self.weight_second = nn.Parameter(torch.randn(class_num))
 
     def forward(self, embedding_first, embedding_second):
         output_first_branch = self.classification_first_branch(embedding_first)
-        output_second_branch = self.classification_second_branch(embedding_second)
+        output_second_branch = self.classification_second_branch(
+            embedding_second
+        )
 
         weight_first_sigmoid = self.weight_first.sigmoid()
         weight_second_sigmoid = self.weight_second.sigmoid()
@@ -252,5 +251,37 @@ class LateFusion(nn.Module):
         sum = torch.add(
             output_first_branch * weight_first_sigmoid,
             output_second_branch * weight_second_sigmoid,
+        )
+        return sum
+
+
+class LateFusionV2(nn.Module):
+    def __init__(
+        self,
+        embedding_first_size,
+        embedding_second_size,
+        class_num,
+    ):
+        super().__init__()
+        self.classification_first_branch = nn.Linear(
+            embedding_first_size, class_num
+        )
+        self.classification_second_branch = nn.Sequential(
+            nn.Linear(embedding_second_size, embedding_second_size // 4),
+            nn.ReLU(),
+            nn.Linear(embedding_second_size // 4, class_num),
+        )
+        self.weight_first = 0.7
+        self.weight_second = 0.3
+
+    def forward(self, embedding_first, embedding_second):
+        output_first_branch = self.classification_first_branch(embedding_first)
+        output_second_branch = self.classification_second_branch(
+            embedding_second
+        )
+
+        sum = torch.add(
+            output_first_branch * self.weight_first,
+            output_second_branch * self.weight_second,
         )
         return sum
