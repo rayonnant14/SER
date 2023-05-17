@@ -12,7 +12,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--dataset_path", type=str, default="SAVEE.npy")
 parser.add_argument("--dataset_name", type=str, default="SAVEE")
 parser.add_argument("--save_path", type=str, default="checkpoints/")
-parser.add_argument("--num_epochs", type=int, default=20)
+parser.add_argument("--num_epochs", type=int, default=300)
 parser.add_argument("--lr", type=float, default=0.001)
 parser.add_argument('--label_smoothing', action='store_true')
 

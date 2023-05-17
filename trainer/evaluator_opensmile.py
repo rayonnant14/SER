@@ -3,6 +3,7 @@ from trainer import EvaluatorClassification
 
 from torch.utils.data import DataLoader, SubsetRandomSampler
 from data import load_opensmile_pca_dataset
+from sklearn import preprocessing
 from sklearn.decomposition import PCA
 
 class EvaluatorOpenSmile(EvaluatorClassification):
@@ -30,6 +31,11 @@ class EvaluatorOpenSmile(EvaluatorClassification):
 
         x_opensmile_train = x_opensmile_train.view(-1, 988).numpy()
         x_opensmile_val = x_opensmile_val.view(-1, 988).numpy()
+
+        scaler = preprocessing.StandardScaler()
+        x_opensmile_train = scaler.fit_transform(x_opensmile_train)
+        x_opensmile_val = scaler.transform(x_opensmile_val)
+
         pca = PCA(n_components=100)
         x_train_pca = pca.fit_transform(x_opensmile_train)
         x_val_pca = pca.transform(x_opensmile_val)
