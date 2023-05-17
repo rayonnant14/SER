@@ -115,8 +115,12 @@ class WeighedFusionV2(nn.Module):
             self.embedding_first_size,
             self.embedding_second_size,
         )
-        self.weight_first = nn.Parameter(torch.randn(self.embedding_second_size))
-        self.weight_second = nn.Parameter(torch.randn(self.embedding_second_size))
+        self.weight_first = nn.Parameter(
+            torch.randn(self.embedding_second_size)
+        )
+        self.weight_second = nn.Parameter(
+            torch.randn(self.embedding_second_size)
+        )
 
         total_embedding_size = self.embedding_second_size
 
@@ -138,6 +142,7 @@ class WeighedFusionV2(nn.Module):
         )
         output = self.classification(sum)
         return output
+
 
 class MulFusion(nn.Module):
     def __init__(
@@ -167,7 +172,8 @@ class MulFusion(nn.Module):
         mul = torch.mul(embedding_first, embedding_second)
         output = self.classification(mul)
         return output
-    
+
+
 class AttentionBasedFusion(nn.Module):
     def __init__(
         self,
@@ -178,8 +184,15 @@ class AttentionBasedFusion(nn.Module):
         super().__init__()
         self.embedding_first_size = embedding_first_size
         self.embedding_second_size = embedding_second_size
+        self.dim_conversion = nn.Linear(
+            self.embedding_first_size,
+            self.embedding_second_size,
+        )
 
-        total_embedding_size = self.embedding_first_size
+        self.multihead_attn = nn.MultiheadAttention(
+            embed_dim=self.embedding_second_size, num_heads=1
+        )
+        total_embedding_size = self.embedding_second_size
         self.classification = nn.Sequential(
             nn.Linear(total_embedding_size, total_embedding_size // 4),
             nn.ReLU(),
@@ -187,7 +200,25 @@ class AttentionBasedFusion(nn.Module):
         )
 
     def forward(self, embedding_first, embedding_second):
-        return
+        embedding_first = self.dim_conversion(embedding_first)
+
+        embedding_first = embedding_first.reshape(
+            embedding_first.size(0), 1, -1
+        )
+        embedding_second = embedding_second.reshape(
+            embedding_second.size(0), 1, -1
+        )
+
+        attn_output, _ = self.multihead_attn(
+            query=embedding_first,
+            key=embedding_second,
+            value=embedding_first,
+            average_attn_weights=True,
+            need_weights=False,
+        )
+        attn_output = attn_output.reshape(attn_output.size(0), -1)
+        output = self.classification(attn_output)
+        return output
 
 
 class LateFusion(nn.Module):
