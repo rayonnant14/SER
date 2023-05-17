@@ -9,7 +9,8 @@ from models import (
     WeighedFusionV1,
     WeighedFusionV2,
     MulFusion,
-    AttentionBasedFusion
+    AttentionBasedFusion,
+    LateFusion
 )
 
 
@@ -91,7 +92,7 @@ class TwoBranches(nn.Module):
             nn.BatchNorm1d(num_features=self.opensmile_features_num // 2),
         )
 
-        self.fusion = AttentionBasedFusion(
+        self.fusion = LateFusion(
             embedding_first_size=nb_filters,
             embedding_second_size=opensmile_features_num // 2,
             class_num=class_num,

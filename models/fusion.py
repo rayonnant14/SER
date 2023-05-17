@@ -188,7 +188,6 @@ class AttentionBasedFusion(nn.Module):
             self.embedding_first_size,
             self.embedding_second_size,
         )
-        print(embedding_second_size)
         self.multihead_attn = nn.MultiheadAttention(
             embed_dim=self.embedding_second_size, num_heads=13
         )
@@ -224,10 +223,34 @@ class AttentionBasedFusion(nn.Module):
 class LateFusion(nn.Module):
     def __init__(
         self,
-        logits_first_size,
-        logits_second_size,
+        embedding_first_size,
+        embedding_second_size,
+        class_num,
     ):
         super().__init__()
+        self.classification_first_branch = nn.Linear(embedding_first_size, class_num)
+        self.classification_second_branch = nn.Sequential(
+            nn.Linear(embedding_second_size, embedding_second_size // 4),
+            nn.ReLU(),
+            nn.Linear(embedding_second_size // 4, class_num),
+        )
+        self.weight_first = nn.Parameter(
+            torch.randn(class_num)
+        )
+        self.weight_second = nn.Parameter(
+            torch.randn(class_num)
+        )
+        
 
-    def forward(self, logits_first, logits_second):
-        return
+    def forward(self, embedding_first, embedding_second):
+        output_first_branch = self.classification_first_branch(embedding_first)
+        output_second_branch = self.classification_second_branch(embedding_second)
+
+        weight_first_sigmoid = self.weight_first.sigmoid()
+        weight_second_sigmoid = self.weight_second.sigmoid()
+
+        sum = torch.add(
+            output_first_branch * weight_first_sigmoid,
+            output_second_branch * weight_second_sigmoid,
+        )
+        return sum
