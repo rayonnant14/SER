@@ -188,9 +188,9 @@ class AttentionBasedFusion(nn.Module):
             self.embedding_first_size,
             self.embedding_second_size,
         )
-
+        print(embedding_second_size)
         self.multihead_attn = nn.MultiheadAttention(
-            embed_dim=self.embedding_second_size, num_heads=1
+            embed_dim=self.embedding_second_size, num_heads=13
         )
         total_embedding_size = self.embedding_second_size
         self.classification = nn.Sequential(
