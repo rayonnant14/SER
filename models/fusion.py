@@ -139,7 +139,35 @@ class WeighedFusionV2(nn.Module):
         output = self.classification(sum)
         return output
 
+class MulFusion(nn.Module):
+    def __init__(
+        self,
+        embedding_first_size,
+        embedding_second_size,
+        class_num,
+    ):
+        super().__init__()
+        self.embedding_first_size = embedding_first_size
+        self.embedding_second_size = embedding_second_size
+        self.dim_conversion = nn.Linear(
+            self.embedding_first_size,
+            self.embedding_second_size,
+        )
+        total_embedding_size = self.embedding_second_size
 
+        self.classification = nn.Sequential(
+            nn.Linear(total_embedding_size, total_embedding_size // 4),
+            nn.ReLU(),
+            nn.Linear(total_embedding_size // 4, class_num),
+        )
+
+    def forward(self, embedding_first, embedding_second):
+        embedding_first = self.dim_conversion(embedding_first)
+
+        mul = torch.mul(embedding_first, embedding_second)
+        output = self.classification(mul)
+        return output
+    
 class AttentionBasedFusion(nn.Module):
     def __init__(
         self,
