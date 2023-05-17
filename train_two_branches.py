@@ -44,6 +44,7 @@ def main():
         criterion=criterion,
         num_epochs=num_epochs,
         save_path=save_path,
+        with_pca=True,
         device=device,
     )
     history = trainer.fit()
@@ -52,6 +53,7 @@ def main():
         dataset=dataset,
         dataset_name=dataset_name,
         model_class=model_class,
+        with_pca=True,
         batch_size=64,
         save_path=save_path,
         device=device,

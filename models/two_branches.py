@@ -25,6 +25,7 @@ class TwoBranches(nn.Module):
         dilations=8,
         dropout_rate=0.1,
         opensmile_features_num=988,
+        with_pca=False
     ):
         super().__init__()
         self.dropout_rate = dropout_rate
@@ -32,7 +33,6 @@ class TwoBranches(nn.Module):
         self.nb_stacks = nb_stacks
         self.kernel_size = kernel_size
         self.nb_filters = nb_filters
-        self.opensmile_features_num = opensmile_features_num
 
         # First Branch
         self.forward_convd = nn.Conv1d(
@@ -82,6 +82,10 @@ class TwoBranches(nn.Module):
         self.flatten_2 = nn.Flatten(start_dim=-2, end_dim=-1)
 
         # Second Branch
+        if with_pca:
+            self.opensmile_features_num = 100
+        else:
+            self.opensmile_features_num = opensmile_features_num
         self.second_branch = nn.Sequential(
             nn.Linear(self.opensmile_features_num, self.opensmile_features_num),
             nn.ReLU(),
@@ -95,7 +99,7 @@ class TwoBranches(nn.Module):
 
         self.fusion = LateFusionV2(
             embedding_first_size=nb_filters,
-            embedding_second_size=opensmile_features_num // 2,
+            embedding_second_size=self.opensmile_features_num // 2,
             class_num=class_num,
         )
         # self.softmax = nn.Softmax(dim=1)

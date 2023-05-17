@@ -5,6 +5,8 @@ import torch.nn as nn
 import numpy as np
 from torch.utils.data import DataLoader, SubsetRandomSampler
 from sklearn.model_selection import KFold
+from data import load_pca_dataset
+from sklearn.decomposition import PCA
 
 from utils.metrics import accuracy
 from sklearn.metrics import recall_score, accuracy_score
@@ -27,6 +29,7 @@ class TrainerClassification(ABC):
         criterion,
         num_epochs: int,
         save_path: str,
+        with_pca=False,
         device=None,
     ):
         self.dataset = dataset
@@ -41,7 +44,7 @@ class TrainerClassification(ABC):
         self.best_uar = 0.0
         self.n_splits = 10
         self.random_state = 42
-
+        self.with_pca = with_pca
         check_if_exist(save_path + "/" + dataset_name)
         self.save_path = save_path + "/" + dataset_name + "/"
 
@@ -71,10 +74,8 @@ class TrainerClassification(ABC):
         out = model.forward(images)
         return labels, out
 
-    def validation_epoch_end(self, outputs):
-        batch_accs = [x["val_acc"] for x in outputs]
-        epoch_acc = torch.stack(batch_accs).mean()
-        return {"val_acc": epoch_acc.item()}
+    def process_dataloader(self, train_loader, val_loader):
+        return train_loader, val_loader
 
     def epoch_end(self, epoch, result):
         print(
@@ -123,15 +124,22 @@ class TrainerClassification(ABC):
                 history = []
                 train_sampler = SubsetRandomSampler(train_idx)
                 val_sampler = SubsetRandomSampler(val_idx)
+                if self.with_pca:
+                    temp_batch_size = len(self.dataset)
+                else:
+                    temp_batch_size = self.batch_size
                 train_loader = DataLoader(
                     self.dataset,
-                    batch_size=self.batch_size,
+                    batch_size=temp_batch_size,
                     sampler=train_sampler,
                 )
                 val_loader = DataLoader(
                     self.dataset,
-                    batch_size=self.batch_size,
+                    batch_size=temp_batch_size,
                     sampler=val_sampler,
+                )
+                train_loader, val_loader = self.process_dataloader(
+                    train_loader, val_loader
                 )
                 model = self.load_model()
                 model.to(self.device)
@@ -157,3 +165,28 @@ class TrainerClassification(ABC):
                     history.append(result)
                 pbar.update(1)
                 # yield history
+
+    def apply_pca(self, train_loader, val_loader):
+        x_train, x_opensmile_train, y_train = next(iter(train_loader))
+        x_val, x_opensmile_val, y_val = next(iter(val_loader))
+
+        x_opensmile_train = x_opensmile_train.view(-1, 988).numpy()
+        x_opensmile_val = x_opensmile_val.view(-1, 988).numpy()
+        pca = PCA(n_components=100)
+        x_train_pca = pca.fit_transform(x_opensmile_train)
+        x_val_pca = pca.transform(x_opensmile_val)
+
+        train_pca = {"x": x_train, "x_opensmile_pca": x_train_pca, "y": y_train}
+        val_pca = {"x": x_val, "x_opensmile_pca": x_val_pca, "y": y_val}
+
+        train_dataset_pca = load_pca_dataset(train_pca)
+        val_dataset_pca = load_pca_dataset(val_pca)
+        train_loader_pca = DataLoader(
+            train_dataset_pca,
+            batch_size=self.batch_size,
+        )
+        val_loader_pca = DataLoader(
+            val_dataset_pca,
+            batch_size=self.batch_size,
+        )
+        return train_loader_pca, val_loader_pca

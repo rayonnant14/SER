@@ -1,7 +1,7 @@
 import torch
 
 from trainer import TrainerClassification
-from utils.metrics import accuracy
+import numpy as np
 
 
 class TrainerTwoBranches(TrainerClassification):
@@ -37,3 +37,14 @@ class TrainerTwoBranches(TrainerClassification):
                 model.state_dict(),
                 self.save_path + "two_branches_" + str(fold) + ".pth",
             )
+
+    def load_model(self):
+        model = self.model_class(
+            class_num=self.dataset_description["num_classes"],
+            with_pca=self.with_pca,
+        )
+        return model
+
+    def process_dataloader(self, train_loader, val_loader):
+        train_loader, val_loader = self.apply_pca(train_loader, val_loader)
+        return train_loader, val_loader

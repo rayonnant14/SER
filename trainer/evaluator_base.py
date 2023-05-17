@@ -4,6 +4,8 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, SubsetRandomSampler
 from sklearn.model_selection import KFold
 from data.datasets import DATASETS
+from data import load_pca_dataset
+from sklearn.decomposition import PCA
 
 from sklearn.metrics import classification_report
 from sklearn.metrics import recall_score, accuracy_score
@@ -20,12 +22,14 @@ class EvaluatorClassification:
         model_class: nn.Module,
         batch_size: int,
         save_path: str,
+        with_pca=False,
         device=None,
     ):
         self.dataset = dataset
         self.dataset_description = DATASETS[dataset_name]
         self.model_class = model_class
         self.batch_size = batch_size
+        self.with_pca = with_pca
         self.device = device
         self.n_splits = 10
         self.random_state = 42
@@ -72,7 +76,10 @@ class EvaluatorClassification:
         uar = recall_score(labels_all, preds_all, average="macro")
         war = accuracy_score(labels_all, preds_all)
         return {"WAR": war, "UAR": uar}
-
+    
+    def process_dataloader(self, train_loader, val_loader):
+        return train_loader, val_loader
+    
     def evaluate(self):
         splits = KFold(
             n_splits=self.n_splits, shuffle=True, random_state=self.random_state
@@ -80,16 +87,31 @@ class EvaluatorClassification:
         average_WAR = 0.0
         average_UAR = 0.0
         with tqdm(total=self.n_splits) as pbar:
-            for fold, (_, val_idx) in enumerate(
+            for fold, (train_idx, val_idx) in enumerate(
                 splits.split(np.arange(len(self.dataset)))
             ):
                 print(f"Process fold {fold}")
+                train_sampler = SubsetRandomSampler(train_idx)
                 val_sampler = SubsetRandomSampler(val_idx)
+
+                if self.with_pca:
+                    temp_batch_size = len(self.dataset)
+                else:
+                    temp_batch_size = self.batch_size
+                train_loader = DataLoader(
+                    self.dataset,
+                    batch_size=temp_batch_size,
+                    sampler=train_sampler,
+                )
                 val_loader = DataLoader(
                     self.dataset,
-                    batch_size=self.batch_size,
+                    batch_size=temp_batch_size,
                     sampler=val_sampler,
                 )
+                _, val_loader = self.process_dataloader(
+                    train_loader, val_loader
+                )
+                
                 model = self.load_model()
                 self.load_model_weights(model, fold)
                 self.eval_mode_on(model)
@@ -106,3 +128,29 @@ class EvaluatorClassification:
         print(
             f"average_UAR: {average_UAR_perc:.2f} %, average_WAR: {average_WAR_perc:.2f} %",
         )
+
+    def apply_pca(self, train_loader, val_loader):
+        x_train, x_opensmile_train, y_train = next(iter(train_loader))
+        x_val, x_opensmile_val, y_val = next(iter(val_loader))
+
+        x_opensmile_train = x_opensmile_train.view(-1, 988).numpy()
+        x_opensmile_val = x_opensmile_val.view(-1, 988).numpy()
+        pca = PCA(n_components=100)
+        x_train_pca = pca.fit_transform(x_opensmile_train)
+        x_val_pca = pca.transform(x_opensmile_val)
+
+        train_pca = {"x": x_train, "x_opensmile_pca": x_train_pca, "y": y_train}
+        val_pca = {"x": x_val, "x_opensmile_pca": x_val_pca, "y": y_val}
+
+        train_dataset_pca = load_pca_dataset(train_pca)
+        val_dataset_pca = load_pca_dataset(val_pca)
+        train_loader_pca = DataLoader(
+            train_dataset_pca,
+            batch_size=self.batch_size,
+        )
+        val_loader_pca = DataLoader(
+            val_dataset_pca,
+            batch_size=self.batch_size,
+        )
+        return train_loader_pca, val_loader_pca
+

@@ -7,9 +7,13 @@ class OpenSmileClassification(nn.Module):
         class_num,
         dropout_rate=0.1,
         opensmile_features_num=988,
+        with_pca=False
     ):
         super().__init__()
-        self.opensmile_features_num = opensmile_features_num
+        if with_pca:
+            self.opensmile_features_num = 100
+        else:
+            self.opensmile_features_num = opensmile_features_num
         self.layers = nn.Sequential(
             nn.Linear(self.opensmile_features_num, self.opensmile_features_num),
             nn.ReLU(),
@@ -40,9 +44,11 @@ class OpenSmileClassification(nn.Module):
         #     nn.Dropout1d(dropout_rate),
         #     nn.BatchNorm1d(num_features=1),
         # )
-        
         self.classification = nn.Sequential(
-            nn.Linear(self.opensmile_features_num // 2, self.opensmile_features_num // 4),
+            nn.Linear(
+                self.opensmile_features_num // 2,
+                self.opensmile_features_num // 4,
+            ),
             nn.ReLU(),
             nn.Linear(self.opensmile_features_num // 4, class_num),
         )
