@@ -174,6 +174,35 @@ class MulFusion(nn.Module):
         return output
 
 
+class WeighedMulFusion(nn.Module):
+    def __init__(
+        self,
+        embedding_first_size,
+        embedding_second_size,
+        class_num,
+    ):
+        super().__init__()
+        self.embedding_first_size = embedding_first_size
+        self.embedding_second_size = embedding_second_size
+        self.weight_matrix = nn.Parameter(
+            torch.randn(embedding_second_size, embedding_first_size)
+        )
+
+        total_embedding_size = embedding_first_size
+        self.classification = nn.Sequential(
+            nn.Linear(total_embedding_size, total_embedding_size // 4),
+            nn.ReLU(),
+            nn.Linear(total_embedding_size // 4, class_num),
+        )
+
+    def forward(self, embedding_first, embedding_second):
+        embedding_second = torch.matmul(embedding_second, self.weight_matrix)
+
+        mul = torch.mul(embedding_first, embedding_second)
+        output = self.classification(mul)
+        return output
+
+
 class AttentionBasedFusion(nn.Module):
     def __init__(
         self,
@@ -228,13 +257,14 @@ class LateFusionV1(nn.Module):
         class_num,
     ):
         super().__init__()
-        self.classification_first_branch = nn.Linear(
-            embedding_first_size, class_num
+        self.classification_first_branch = nn.Sequential(
+            nn.Linear(embedding_first_size, class_num), nn.Softmax(dim=1)
         )
         self.classification_second_branch = nn.Sequential(
             nn.Linear(embedding_second_size, embedding_second_size // 4),
             nn.ReLU(),
             nn.Linear(embedding_second_size // 4, class_num),
+            nn.Softmax(dim=1),
         )
         self.weight_first = nn.Parameter(torch.randn(class_num))
         self.weight_second = nn.Parameter(torch.randn(class_num))
@@ -263,13 +293,14 @@ class LateFusionV2(nn.Module):
         class_num,
     ):
         super().__init__()
-        self.classification_first_branch = nn.Linear(
-            embedding_first_size, class_num
+        self.classification_first_branch = nn.Sequential(
+            nn.Linear(embedding_first_size, class_num), nn.Softmax(dim=1)
         )
         self.classification_second_branch = nn.Sequential(
             nn.Linear(embedding_second_size, embedding_second_size // 4),
             nn.ReLU(),
             nn.Linear(embedding_second_size // 4, class_num),
+            nn.Softmax(dim=1),
         )
         self.weight_first = 0.7
         self.weight_second = 0.3

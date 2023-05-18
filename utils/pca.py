@@ -4,7 +4,7 @@ from sklearn import preprocessing
 from sklearn.decomposition import PCA
 
 
-def apply_pca(train_loader, val_loader, batch_size, n_components=100):
+def apply_pca(train_loader, val_loader, batch_size, pca_components=100):
     train = next(iter(train_loader))
     val = next(iter(val_loader))
 
@@ -21,10 +21,10 @@ def apply_pca(train_loader, val_loader, batch_size, n_components=100):
     scaler = preprocessing.StandardScaler()
     x_opensmile_train = scaler.fit_transform(x_opensmile_train)
     x_opensmile_val = scaler.transform(x_opensmile_val)
-
-    pca = PCA(n_components=n_components)
+    pca = PCA(n_components=pca_components)
     x_train_pca = pca.fit_transform(x_opensmile_train)
     x_val_pca = pca.transform(x_opensmile_val)
+    # print(f"explained_variance_ratio_ {pca.explained_variance_ratio_.sum()}")
     if len(train) == 3:
         train_pca = {"x": x_train, "x_opensmile": x_train_pca, "y": y_train}
         val_pca = {"x": x_val, "x_opensmile": x_val_pca, "y": y_val}

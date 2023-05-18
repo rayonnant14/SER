@@ -35,6 +35,7 @@ def main():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     batch_size = 64
     with_pca = True
+    pca_components = 150
     model_class = TwoBranches
     trainer = TrainerTwoBranches(
         dataset=dataset,
@@ -47,6 +48,7 @@ def main():
         num_epochs=num_epochs,
         save_path=save_path,
         with_pca=with_pca,
+        pca_components=pca_components,
         device=device,
     )
     history = trainer.fit()
@@ -56,6 +58,7 @@ def main():
         dataset_name=dataset_name,
         model_class=model_class,
         with_pca=with_pca,
+        pca_components=pca_components,
         batch_size=batch_size,
         save_path=save_path,
         device=device,

@@ -8,10 +8,11 @@ class OpenSmile(nn.Module):
         dropout_rate=0.1,
         opensmile_features_num=988,
         with_pca=False,
+        pca_components=100
     ):
         super().__init__()
         if with_pca:
-            self.opensmile_features_num = 100
+            self.opensmile_features_num = pca_components
         else:
             self.opensmile_features_num = opensmile_features_num
         # self.layers = nn.Sequential(
@@ -57,10 +58,11 @@ class OpenSmileClassification(nn.Module):
         dropout_rate=0.1,
         opensmile_features_num=988,
         with_pca=False,
+        pca_components=100
     ):
         super().__init__()
         if with_pca:
-            self.opensmile_features_num = 100
+            self.opensmile_features_num = pca_components
         else:
             self.opensmile_features_num = opensmile_features_num
 
@@ -69,6 +71,7 @@ class OpenSmileClassification(nn.Module):
             dropout_rate=dropout_rate,
             opensmile_features_num=self.opensmile_features_num,
             with_pca=with_pca,
+            pca_components=pca_components
         )
 
         self.classification = nn.Sequential(

@@ -21,6 +21,7 @@ class Base(ABC):
         batch_size: int,
         save_path: str,
         with_pca=False,
+        pca_components=100,
         device=None,
     ):
         self.dataset = dataset
@@ -31,12 +32,14 @@ class Base(ABC):
         self.n_splits = 10
         self.random_state = 42
         self.with_pca = with_pca
+        self.pca_components = pca_components
         check_if_exist(save_path + "/" + dataset_name)
         self.save_path = save_path + "/" + dataset_name + "/"
 
     def load_model(self):
         model = self.model_class(
-            class_num=self.dataset_description["num_classes"]
+            class_num=self.dataset_description["num_classes"],
+            pca_components=self.pca_components,
         )
         return model
 
@@ -45,12 +48,6 @@ class Base(ABC):
 
     def eval_mode_on(self, model):
         model.eval()
-
-    def process_dataloader(self, train_sampler, val_sampler):
-        train_loader, val_loader = apply_pca(
-            train_sampler, val_sampler, self.batch_size
-        )
-        return train_loader, val_loader
 
     def validation_step(self, model, batch):
         images, labels = batch
@@ -73,7 +70,7 @@ class Base(ABC):
         preds_all = np.concatenate(preds_all, axis=0)
         uar = recall_score(labels_all, preds_all, average="macro")
         war = accuracy_score(labels_all, preds_all)
-        if report :
+        if report:
             report = classification_report(
                 labels_all,
                 preds_all,
@@ -95,5 +92,7 @@ class Base(ABC):
             batch_size=len(self.dataset),
             sampler=val_sampler,
         )
-        train_loader, val_loader = apply_pca(train_loader, val_loader, self.batch_size)
+        train_loader, val_loader = apply_pca(
+            train_loader, val_loader, self.batch_size, self.pca_components
+        )
         return train_loader, val_loader

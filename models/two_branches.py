@@ -8,6 +8,7 @@ from models import (
     WeighedFusionV1,
     WeighedFusionV2,
     MulFusion,
+    WeighedMulFusion,
     AttentionBasedFusion,
     LateFusionV1,
     LateFusionV2,
@@ -25,10 +26,11 @@ class TwoBranches(nn.Module):
         dropout_rate=0.1,
         opensmile_features_num=988,
         with_pca=False,
+        pca_components=100
     ):
         super().__init__()
         if with_pca:
-            self.opensmile_features_num = 100
+            self.opensmile_features_num = pca_components
         else:
             self.opensmile_features_num = opensmile_features_num
 
@@ -54,9 +56,10 @@ class TwoBranches(nn.Module):
             dropout_rate=dropout_rate,
             opensmile_features_num=opensmile_features_num,
             with_pca=with_pca,
+            pca_components=pca_components
         )
 
-        self.fusion = LateFusionV2(
+        self.fusion = WeighedMulFusion(
             embedding_first_size=nb_filters,
             embedding_second_size=self.opensmile_features_num // 2,
             class_num=class_num,
