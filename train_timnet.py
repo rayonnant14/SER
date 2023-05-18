@@ -2,9 +2,9 @@ import torch
 
 from trainer import TrainerClassification
 from trainer import EvaluatorClassification
-from models import TIMNET
+from models import TIMNETClassification
 
-from data import load_timnet_dataset
+from data import load_ser_dataset
 
 import argparse
 
@@ -14,7 +14,7 @@ parser.add_argument("--dataset_name", type=str, default="SAVEE")
 parser.add_argument("--save_path", type=str, default="checkpoints/")
 parser.add_argument("--num_epochs", type=int, default=20)
 parser.add_argument("--lr", type=float, default=0.001)
-parser.add_argument('--label_smoothing', action='store_true')
+parser.add_argument("--label_smoothing", action="store_true")
 
 
 def main():
@@ -24,7 +24,7 @@ def main():
     save_path = args.save_path
     num_epochs = args.num_epochs
     label_smoothing = args.label_smoothing
-    dataset = load_timnet_dataset(dataset_path)
+    dataset = load_ser_dataset(dataset_path, use_keys=["x", "y"])
 
     optimizer_func = torch.optim.Adam
     optimizer_parameters = {"lr": args.lr, "betas": (0.93, 0.98)}
@@ -33,12 +33,13 @@ def main():
     else:
         criterion = torch.nn.CrossEntropyLoss()
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model_class = TIMNET
+    batch_size = 64
+    model_class = TIMNETClassification
     trainer = TrainerClassification(
         dataset=dataset,
         dataset_name=dataset_name,
         model_class=model_class,
-        batch_size=64,
+        batch_size=batch_size,
         optimizer_func=optimizer_func,
         optimizer_parameters=optimizer_parameters,
         criterion=criterion,
@@ -52,11 +53,11 @@ def main():
         dataset=dataset,
         dataset_name=dataset_name,
         model_class=model_class,
-        batch_size=64,
+        batch_size=batch_size,
         save_path=save_path,
         device=device,
     )
-    evaluator.evaluate()
+    evaluator.predict()
 
 
 if __name__ == "__main__":

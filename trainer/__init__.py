@@ -1,3 +1,4 @@
+from .base import *
 from .trainer_base import *
 from .trainer_opensmile import *
 from .trainer_two_branches import *

@@ -1,86 +1,25 @@
 import torch
-import torch.nn as nn
 
 from torch.utils.data import DataLoader, SubsetRandomSampler
 from sklearn.model_selection import KFold
-from data.datasets import DATASETS
-from data import load_pca_dataset
-from sklearn.decomposition import PCA
 
-from sklearn.metrics import classification_report
-from sklearn.metrics import recall_score, accuracy_score
 import numpy as np
 
 from tqdm import tqdm
+from trainer import Base
 
 
-class EvaluatorClassification:
-    def __init__(
-        self,
-        dataset: torch.utils.data.Dataset,
-        dataset_name: str,
-        model_class: nn.Module,
-        batch_size: int,
-        save_path: str,
-        with_pca=False,
-        device=None,
-    ):
-        self.dataset = dataset
-        self.dataset_description = DATASETS[dataset_name]
-        self.model_class = model_class
-        self.batch_size = batch_size
-        self.with_pca = with_pca
-        self.device = device
-        self.n_splits = 10
-        self.random_state = 42
-        self.save_path = save_path + "/" + dataset_name + "/"
-
-    def load_model(self):
-        model = self.model_class(
-            class_num=self.dataset_description["num_classes"]
-        )
-        return model
+class EvaluatorClassification(Base):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def load_model_weights(self, model, fold):
-        model_path = self.save_path + "timnet_" + str(fold) + ".pth"
+        model_path = (
+            self.save_path + model.get_name() + "_" + str(fold) + ".pth"
+        )
         model.load_state_dict(torch.load(model_path))
 
-    def eval_mode_on(self, model):
-        model.eval()
-
-    def infer_model(self, model, batch):
-        images, labels = batch
-        images, labels = images.to(self.device), labels.to(self.device)
-        out = model.forward(images)
-        return labels, out
-
-    @torch.no_grad()
-    def evaluate_model(self, model, val_loader):
-        labels_all = []
-        preds_all = []
-        for batch in val_loader:
-            labels, preds = self.infer_model(model, batch)
-            labels = labels.cpu().detach().numpy()
-            preds = torch.argmax(preds, dim=1).cpu().detach().numpy()
-            labels_all.append(labels)
-            preds_all.append(preds)
-        labels_all = np.concatenate(labels_all, axis=0)
-        preds_all = np.concatenate(preds_all, axis=0)
-        print(
-            classification_report(
-                labels_all,
-                preds_all,
-                target_names=self.dataset_description["target_names"],
-            )
-        )
-        uar = recall_score(labels_all, preds_all, average="macro")
-        war = accuracy_score(labels_all, preds_all)
-        return {"WAR": war, "UAR": uar}
-    
-    def process_dataloader(self, train_loader, val_loader):
-        return train_loader, val_loader
-    
-    def evaluate(self):
+    def predict(self):
         splits = KFold(
             n_splits=self.n_splits, shuffle=True, random_state=self.random_state
         )
@@ -95,28 +34,22 @@ class EvaluatorClassification:
                 val_sampler = SubsetRandomSampler(val_idx)
 
                 if self.with_pca:
-                    temp_batch_size = len(self.dataset)
+                    _, val_loader = self.process_dataloader(
+                        train_sampler, val_sampler
+                    )
                 else:
-                    temp_batch_size = self.batch_size
-                train_loader = DataLoader(
-                    self.dataset,
-                    batch_size=temp_batch_size,
-                    sampler=train_sampler,
-                )
-                val_loader = DataLoader(
-                    self.dataset,
-                    batch_size=temp_batch_size,
-                    sampler=val_sampler,
-                )
-                _, val_loader = self.process_dataloader(
-                    train_loader, val_loader
-                )
-                
+                    val_loader = DataLoader(
+                        self.dataset,
+                        batch_size=self.batch_size,
+                        sampler=val_sampler,
+                    )
+
                 model = self.load_model()
                 self.load_model_weights(model, fold)
                 self.eval_mode_on(model)
                 model.to(self.device)
-                metrics = self.evaluate_model(model, val_loader)
+                metrics = self.evaluate(model, val_loader, report=True)
+                print(metrics["report"])
                 average_WAR += metrics["WAR"]
                 average_UAR += metrics["UAR"]
                 pbar.update(1)
@@ -128,29 +61,3 @@ class EvaluatorClassification:
         print(
             f"average_UAR: {average_UAR_perc:.2f} %, average_WAR: {average_WAR_perc:.2f} %",
         )
-
-    def apply_pca(self, train_loader, val_loader):
-        x_train, x_opensmile_train, y_train = next(iter(train_loader))
-        x_val, x_opensmile_val, y_val = next(iter(val_loader))
-
-        x_opensmile_train = x_opensmile_train.view(-1, 988).numpy()
-        x_opensmile_val = x_opensmile_val.view(-1, 988).numpy()
-        pca = PCA(n_components=100)
-        x_train_pca = pca.fit_transform(x_opensmile_train)
-        x_val_pca = pca.transform(x_opensmile_val)
-
-        train_pca = {"x": x_train, "x_opensmile_pca": x_train_pca, "y": y_train}
-        val_pca = {"x": x_val, "x_opensmile_pca": x_val_pca, "y": y_val}
-
-        train_dataset_pca = load_pca_dataset(train_pca)
-        val_dataset_pca = load_pca_dataset(val_pca)
-        train_loader_pca = DataLoader(
-            train_dataset_pca,
-            batch_size=self.batch_size,
-        )
-        val_loader_pca = DataLoader(
-            val_dataset_pca,
-            batch_size=self.batch_size,
-        )
-        return train_loader_pca, val_loader_pca
-

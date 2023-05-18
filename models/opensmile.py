@@ -1,31 +1,19 @@
 import torch.nn as nn
 
 
-class OpenSmileClassification(nn.Module):
+class OpenSmile(nn.Module):
     def __init__(
         self,
         class_num,
         dropout_rate=0.1,
         opensmile_features_num=988,
-        with_pca=False
+        with_pca=False,
     ):
         super().__init__()
         if with_pca:
             self.opensmile_features_num = 100
         else:
             self.opensmile_features_num = opensmile_features_num
-        self.layers = nn.Sequential(
-            nn.Linear(self.opensmile_features_num, self.opensmile_features_num),
-            nn.ReLU(),
-            nn.Dropout1d(dropout_rate),
-            nn.BatchNorm1d(num_features=self.opensmile_features_num),
-            nn.Linear(
-                self.opensmile_features_num, self.opensmile_features_num // 2
-            ),
-            nn.ReLU(),
-            nn.Dropout1d(dropout_rate),
-            nn.BatchNorm1d(num_features=self.opensmile_features_num // 2),
-        )
         # self.layers = nn.Sequential(
         #     nn.Conv1d(
         #         1,
@@ -44,6 +32,45 @@ class OpenSmileClassification(nn.Module):
         #     nn.Dropout1d(dropout_rate),
         #     nn.BatchNorm1d(num_features=1),
         # )
+        self.layers = nn.Sequential(
+            nn.Linear(self.opensmile_features_num, self.opensmile_features_num),
+            nn.ReLU(),
+            nn.Dropout1d(dropout_rate),
+            nn.BatchNorm1d(num_features=self.opensmile_features_num),
+            nn.Linear(
+                self.opensmile_features_num, self.opensmile_features_num // 2
+            ),
+            nn.ReLU(),
+            nn.Dropout1d(dropout_rate),
+            nn.BatchNorm1d(num_features=self.opensmile_features_num // 2),
+        )
+
+    def forward(self, opensmile_x):
+        output = self.layers(opensmile_x)
+        return output
+
+
+class OpenSmileClassification(nn.Module):
+    def __init__(
+        self,
+        class_num,
+        dropout_rate=0.1,
+        opensmile_features_num=988,
+        with_pca=False,
+    ):
+        super().__init__()
+        if with_pca:
+            self.opensmile_features_num = 100
+        else:
+            self.opensmile_features_num = opensmile_features_num
+
+        self.OpenSmile = OpenSmile(
+            class_num=class_num,
+            dropout_rate=dropout_rate,
+            opensmile_features_num=self.opensmile_features_num,
+            with_pca=with_pca,
+        )
+
         self.classification = nn.Sequential(
             nn.Linear(
                 self.opensmile_features_num // 2,
@@ -55,7 +82,10 @@ class OpenSmileClassification(nn.Module):
         # self.softmax = nn.Softmax(dim=1)
 
     def forward(self, opensmile_x):
-        output = self.layers(opensmile_x)
+        output = self.OpenSmile(opensmile_x)
         output = self.classification(output)
         # x = self.softmax(x)
         return output
+
+    def get_name(self):
+        return "opensmile"

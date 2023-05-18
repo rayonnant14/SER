@@ -4,7 +4,7 @@ from trainer import TrainerTwoBranches
 from trainer import EvaluatorTwoBranches
 from models import TwoBranches
 
-from data import load_two_branches_dataset 
+from data import load_ser_dataset
 
 import argparse
 
@@ -24,7 +24,7 @@ def main():
     save_path = args.save_path
     num_epochs = args.num_epochs
     label_smoothing = args.label_smoothing
-    dataset = load_two_branches_dataset(dataset_path)
+    dataset = load_ser_dataset(dataset_path, use_keys=["x", "x_opensmile", "y"])
 
     optimizer_func = torch.optim.Adam
     optimizer_parameters = {"lr": args.lr, "betas": (0.93, 0.98)}
@@ -33,18 +33,20 @@ def main():
     else:
         criterion = torch.nn.CrossEntropyLoss()
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    batch_size = 64
+    with_pca = True
     model_class = TwoBranches
     trainer = TrainerTwoBranches(
         dataset=dataset,
         dataset_name=dataset_name,
         model_class=model_class,
-        batch_size=64,
+        batch_size=batch_size,
         optimizer_func=optimizer_func,
         optimizer_parameters=optimizer_parameters,
         criterion=criterion,
         num_epochs=num_epochs,
         save_path=save_path,
-        with_pca=True,
+        with_pca=with_pca,
         device=device,
     )
     history = trainer.fit()
@@ -53,12 +55,12 @@ def main():
         dataset=dataset,
         dataset_name=dataset_name,
         model_class=model_class,
-        with_pca=True,
-        batch_size=64,
+        with_pca=with_pca,
+        batch_size=batch_size,
         save_path=save_path,
         device=device,
     )
-    evaluator.evaluate()
+    evaluator.predict()
 
 
 if __name__ == "__main__":

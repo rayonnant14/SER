@@ -162,7 +162,7 @@ class TIMNET(nn.Module):
             in_channels=self.dilations, out_channels=1, kernel_size=1
         )
         self.flatten_2 = nn.Flatten(start_dim=-2, end_dim=-1)
-        self.fc = nn.Linear(nb_filters, class_num)
+        # self.fc = nn.Linear(nb_filters, class_num)
         # self.softmax = nn.Softmax(dim=1)
 
     def forward(self, x):
@@ -190,6 +190,36 @@ class TIMNET(nn.Module):
         output = torch.cat(final_skip_connection, dim=-2)
         output = self.weight_layer(output)
         output = self.flatten_2(output)
-        output = self.fc(output)
+        # output = self.fc(output)
         # x = self.softmax(x)
         return output
+
+
+class TIMNETClassification(nn.Module):
+    def __init__(
+        self,
+        class_num,
+        nb_filters=39,
+        kernel_size=2,
+        nb_stacks=1,
+        dilations=8,
+        dropout_rate=0.1,
+    ):
+        super().__init__()
+        self.TIMNET = TIMNET(
+            class_num=class_num,
+            nb_filters=nb_filters,
+            kernel_size=kernel_size,
+            nb_stacks=nb_stacks,
+            dilations=dilations,
+            dropout_rate=dropout_rate,
+        )
+        self.FC = nn.Linear(nb_filters, class_num)
+
+    def forward(self, x):
+        output = self.TIMNET(x)
+        output = self.FC(output)
+        return output
+
+    def get_name(self):
+        return "timnet"
