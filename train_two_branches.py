@@ -2,7 +2,7 @@ import torch
 
 from trainer import TrainerTwoBranches
 from trainer import EvaluatorTwoBranches
-from models import TwoBranches
+from models import TwoBranches, ASRTwoBranches
 
 from data import load_ser_dataset
 
@@ -24,7 +24,7 @@ def main():
     save_path = args.save_path
     num_epochs = args.num_epochs
     label_smoothing = args.label_smoothing
-    dataset = load_ser_dataset(dataset_path, use_keys=["x", "x_opensmile", "y"])
+    dataset = load_ser_dataset(dataset_path, use_keys=["x", "x_asr", "y"])
 
     optimizer_func = torch.optim.Adam
     optimizer_parameters = {"lr": args.lr, "betas": (0.93, 0.98)}
@@ -34,9 +34,9 @@ def main():
         criterion = torch.nn.CrossEntropyLoss()
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     batch_size = 64
-    with_pca = True
-    pca_components = 150
-    model_class = TwoBranches
+    with_pca = False
+    pca_components = None
+    model_class = ASRTwoBranches
     trainer = TrainerTwoBranches(
         dataset=dataset,
         dataset_name=dataset_name,
