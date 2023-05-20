@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-
+#TODO train conv to convert 2 channels to 1 chfnnel
 class ConcatinationBasedFusion(nn.Module):
     def __init__(self, embedding_first_size, embedding_second_size, class_num):
         super().__init__()

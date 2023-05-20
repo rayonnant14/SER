@@ -14,6 +14,8 @@ from models import (
     LateFusionV2,
 )
 
+# TODO train conv to convert 2 channels to 1 channel
+
 
 class ASRTwoBranches(nn.Module):
     def __init__(
@@ -24,9 +26,9 @@ class ASRTwoBranches(nn.Module):
         nb_stacks=1,
         dilations=8,
         dropout_rate=0.1,
-        asr_features_num=512,
+        asr_features_num=256,
         with_pca=False,
-        pca_components=100
+        pca_components=100,
     ):
         super().__init__()
         if with_pca:
@@ -49,8 +51,11 @@ class ASRTwoBranches(nn.Module):
             dilations=dilations,
             dropout_rate=dropout_rate,
         )
-
-        self.fusion = AttentionBasedFusion(
+        # Second Branch
+        self.second_branch = nn.Conv1d(
+            in_channels=2, out_channels=1, kernel_size=1
+        )
+        self.fusion = WeighedFusionV2(
             embedding_first_size=nb_filters,
             embedding_second_size=self.asr_features_num,
             class_num=class_num,
@@ -59,8 +64,11 @@ class ASRTwoBranches(nn.Module):
 
     def forward(self, x, x_asr):
         output_first_branch = self.first_branch(x)
-
-        output = self.fusion(output_first_branch, x_asr)
+        output_second_branch = self.second_branch(x_asr)
+        output_second_branch = output_second_branch.reshape(
+            output_second_branch.size(0), -1
+        )
+        output = self.fusion(output_first_branch, output_second_branch)
         # x = self.softmax(x)
         return output
 
