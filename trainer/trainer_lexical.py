@@ -7,7 +7,7 @@ class TrainerASR_LM(TrainerOpenSmile):
 
     def training_step(self, model, batch):
         x, x_asr, x_lm, labels = batch
-        x, x_asr, x_asr_electra, labels = (
+        x, x_asr, x_lm, labels = (
             x.to(self.device),
             x_asr.to(self.device),
             x_lm.to(self.device),
