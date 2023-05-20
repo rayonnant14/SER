@@ -52,9 +52,9 @@ class ASRTwoBranches(nn.Module):
             dropout_rate=dropout_rate,
         )
         # Second Branch
-        self.second_branch = nn.Conv1d(
-            in_channels=2, out_channels=1, kernel_size=1
-        )
+        # self.second_branch = nn.Conv1d(
+        #     in_channels=2, out_channels=1, kernel_size=1
+        # )
         self.fusion = WeighedFusionV2(
             embedding_first_size=nb_filters,
             embedding_second_size=self.asr_features_num,
@@ -64,11 +64,11 @@ class ASRTwoBranches(nn.Module):
 
     def forward(self, x, x_asr):
         output_first_branch = self.first_branch(x)
-        output_second_branch = self.second_branch(x_asr)
-        output_second_branch = output_second_branch.reshape(
-            output_second_branch.size(0), -1
-        )
-        output = self.fusion(output_first_branch, output_second_branch)
+        # output_second_branch = self.second_branch(x_asr)
+        # output_second_branch = output_second_branch.reshape(
+        #     output_second_branch.size(0), -1
+        # )
+        output = self.fusion(output_first_branch, x_asr)
         # x = self.softmax(x)
         return output
 
