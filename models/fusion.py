@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
+from sympy import divisors
 
-#TODO train conv to convert 2 channels to 1 chfnnel
+
 class ConcatinationBasedFusion(nn.Module):
     def __init__(self, embedding_first_size, embedding_second_size, class_num):
         super().__init__()
@@ -217,9 +218,12 @@ class AttentionBasedFusion(nn.Module):
             self.embedding_first_size,
             self.embedding_second_size,
         )
+        divs = divisors(self.embedding_second_size)
+        num_heads = divs[min(range(len(divs)), key=lambda i: abs(divs[i] - 12))]
         self.multihead_attn = nn.MultiheadAttention(
-            embed_dim=self.embedding_second_size, num_heads=16
+            embed_dim=self.embedding_second_size, num_heads=num_heads
         )
+        print(num_heads)
         total_embedding_size = self.embedding_second_size
         self.classification = nn.Sequential(
             nn.Linear(total_embedding_size, total_embedding_size // 4),

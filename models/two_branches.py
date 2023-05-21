@@ -1,38 +1,27 @@
 import torch.nn as nn
 
-from models import TIMNET, OpenSmile
-
-from models import (
-    ConcatinationBasedFusion,
-    WightedSumBasedFusion,
-    WeighedFusionV1,
-    WeighedFusionV2,
-    MulFusion,
-    WeighedMulFusion,
-    AttentionBasedFusion,
-    LateFusionV1,
-    LateFusionV2,
-)
+from models import TIMNET, AdditionalFeature
 
 
-class TwoBranches(nn.Module):
+class TwoBranchesClassification(nn.Module):
     def __init__(
         self,
         class_num,
+        features_num,
+        fusion,
         nb_filters=39,
         kernel_size=2,
         nb_stacks=1,
         dilations=8,
         dropout_rate=0.1,
-        opensmile_features_num=988,
         with_pca=False,
         pca_components=100
     ):
         super().__init__()
         if with_pca:
-            self.opensmile_features_num = pca_components
+            self.features_num = pca_components
         else:
-            self.opensmile_features_num = opensmile_features_num
+            self.features_num = features_num
 
         self.dropout_rate = dropout_rate
         self.dilations = dilations
@@ -51,24 +40,23 @@ class TwoBranches(nn.Module):
         )
 
         # Second Branch
-        self.second_branch = OpenSmile(
-            class_num=class_num,
+        self.second_branch = AdditionalFeature(
             dropout_rate=dropout_rate,
-            opensmile_features_num=opensmile_features_num,
+            features_num=self.features_num,
             with_pca=with_pca,
             pca_components=pca_components
         )
 
-        self.fusion = WeighedMulFusion(
+        self.fusion = fusion(
             embedding_first_size=nb_filters,
-            embedding_second_size=self.opensmile_features_num // 2,
+            embedding_second_size=self.features_num // 2,
             class_num=class_num,
         )
         # self.softmax = nn.Softmax(dim=1)
 
-    def forward(self, x, opensmile_x):
+    def forward(self, x, x_additional):
         output_first_branch = self.first_branch(x)
-        output_second_branch = self.second_branch(opensmile_x)
+        output_second_branch = self.second_branch(x_additional)
 
         output = self.fusion(output_first_branch, output_second_branch)
         # x = self.softmax(x)

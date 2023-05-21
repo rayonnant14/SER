@@ -49,6 +49,12 @@ class TrainerClassification(Base):
                 self.save_path + model.get_name() + "_" + str(fold) + ".pth",
             )
 
+    def load_model_weights(self, model, fold):
+        model_path = (
+            self.save_path + model.get_name() + "_" + str(fold) + ".pth"
+        )
+        model.load_state_dict(torch.load(model_path))
+
     def fit(self):
         splits = KFold(
             n_splits=self.n_splits, shuffle=True, random_state=self.random_state
@@ -62,22 +68,9 @@ class TrainerClassification(Base):
                 history = []
                 train_sampler = SubsetRandomSampler(train_idx)
                 val_sampler = SubsetRandomSampler(val_idx)
-                if self.with_pca:
-                    train_loader, val_loader = self.process_dataloader(
-                        train_sampler, val_sampler
-                    )
-                else:
-                    train_loader = DataLoader(
-                        self.dataset,
-                        batch_size=self.batch_size,
-                        sampler=train_sampler,
-                    )
-                    val_loader = DataLoader(
-                        self.dataset,
-                        batch_size=self.batch_size,
-                        sampler=val_sampler,
-                    )
-
+                train_loader, val_loader = self.process_dataloader(
+                    train_sampler, val_sampler
+                )
                 model = self.load_model()
                 model.to(self.device)
 
@@ -101,4 +94,43 @@ class TrainerClassification(Base):
                     self.save_best_model(model, result["UAR"], fold)
                     history.append(result)
                 pbar.update(1)
+
+    def predict(self):
+        splits = KFold(
+            n_splits=self.n_splits, shuffle=True, random_state=self.random_state
+        )
+        average_WAR = 0.0
+        average_UAR = 0.0
+        with tqdm(total=self.n_splits) as pbar:
+            for fold, (train_idx, val_idx) in enumerate(
+                splits.split(np.arange(len(self.dataset)))
+            ):
+                print(f"Process fold {fold}")
+                train_sampler = SubsetRandomSampler(train_idx)
+                val_sampler = SubsetRandomSampler(val_idx)
+
+                _, val_loader = self.process_dataloader(
+                    train_sampler, val_sampler
+                )
+                model = self.load_model()
+                self.load_model_weights(model, fold)
+                self.eval_mode_on(model)
+                model.to(self.device)
+                metrics = self.evaluate(model, val_loader, report=True)
+                print(metrics["report"])
+                average_WAR += metrics["WAR"]
+                average_UAR += metrics["UAR"]
+                pbar.update(1)
                 # yield history
+        average_WAR /= self.n_splits
+        average_UAR /= self.n_splits
+        average_WAR_perc = average_WAR * 100.0
+        average_UAR_perc = average_UAR * 100.0
+        print(
+            f"average_UAR: {average_UAR_perc:.2f} %, average_WAR: {average_WAR_perc:.2f} %",
+        )
+        return {
+            "average_UAR": round(average_UAR_perc, 2),
+            "average_WAR": round(average_WAR_perc, 2),
+        }
+        # yield history

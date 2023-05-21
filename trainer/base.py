@@ -6,7 +6,6 @@ import numpy as np
 
 from torch.utils.data import DataLoader
 from data.datasets import DATASETS
-from utils import apply_pca
 
 from sklearn.metrics import recall_score, accuracy_score, classification_report
 from utils.misc import check_if_exist
@@ -39,7 +38,6 @@ class Base(ABC):
     def load_model(self):
         model = self.model_class(
             class_num=self.dataset_description["num_classes"],
-            pca_components=self.pca_components,
         )
         return model
 
@@ -54,7 +52,20 @@ class Base(ABC):
         images, labels = images.to(self.device), labels.to(self.device)
         out = model.forward(images)
         return labels, out
-
+    
+    def process_dataloader(self, train_sampler, val_sampler):
+        train_loader = DataLoader(
+            self.dataset,
+            batch_size=self.batch_size,
+            sampler=train_sampler,
+        )
+        val_loader = DataLoader(
+            self.dataset,
+            batch_size=self.batch_size,
+            sampler=val_sampler,
+        )
+        return train_loader, val_loader
+    
     @torch.no_grad()
     def evaluate(self, model, val_loader, report=False):
         self.eval_mode_on(model)
@@ -81,18 +92,4 @@ class Base(ABC):
             metrics = {"WAR": war, "UAR": uar}
         return metrics
 
-    def process_dataloader(self, train_sampler, val_sampler):
-        train_loader = DataLoader(
-            self.dataset,
-            batch_size=len(self.dataset),
-            sampler=train_sampler,
-        )
-        val_loader = DataLoader(
-            self.dataset,
-            batch_size=len(self.dataset),
-            sampler=val_sampler,
-        )
-        train_loader, val_loader = apply_pca(
-            train_loader, val_loader, self.batch_size, self.pca_components
-        )
-        return train_loader, val_loader
+    

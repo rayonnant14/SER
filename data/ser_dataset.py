@@ -42,6 +42,12 @@ class SERDataset(Dataset):
         elif "x_opensmile" in self.use_keys:
             x_opensmile = torch.from_numpy(self.data["x_opensmile"][idx])
             return x_opensmile, y
+        elif "x_asr" in self.use_keys:
+            x_opensmile = torch.from_numpy(self.data["x_asr"][idx])
+            return x_opensmile, y
+        elif "x_lm" in self.use_keys:
+            x_opensmile = torch.from_numpy(self.data["x_lm"][idx])
+            return x_opensmile, y
         else:
             x = torch.from_numpy(self.data["x"][idx].transpose())
             return x, y

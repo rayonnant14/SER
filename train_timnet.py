@@ -1,7 +1,6 @@
 import torch
 
 from trainer import TrainerClassification
-from trainer import EvaluatorClassification
 from models import TIMNETClassification
 
 from data import load_ser_dataset
@@ -48,16 +47,7 @@ def main():
         device=device,
     )
     history = trainer.fit()
-
-    evaluator = EvaluatorClassification(
-        dataset=dataset,
-        dataset_name=dataset_name,
-        model_class=model_class,
-        batch_size=batch_size,
-        save_path=save_path,
-        device=device,
-    )
-    evaluator.predict()
+    trainer.predict()
 
 
 if __name__ == "__main__":

@@ -1,8 +1,18 @@
 import torch
 
 from trainer import TrainerTwoBranches
-from trainer import EvaluatorTwoBranches
-from models import TwoBranches, ASRTwoBranches
+from models import TwoBranches
+from models import (
+    ConcatinationBasedFusion,
+    WightedSumBasedFusion,
+    WeighedFusionV1,
+    WeighedFusionV2,
+    MulFusion,
+    WeighedMulFusion,
+    AttentionBasedFusion,
+    LateFusionV1,
+    LateFusionV2,
+)
 
 from data import load_ser_dataset
 
@@ -24,7 +34,7 @@ def main():
     save_path = args.save_path
     num_epochs = args.num_epochs
     label_smoothing = args.label_smoothing
-    dataset = load_ser_dataset(dataset_path, use_keys=["x", "x_asr", "y"])
+    dataset = load_ser_dataset(dataset_path, use_keys=["x", "x_lm", "y"])
 
     optimizer_func = torch.optim.Adam
     optimizer_parameters = {"lr": args.lr, "betas": (0.93, 0.98)}
@@ -34,13 +44,17 @@ def main():
         criterion = torch.nn.CrossEntropyLoss()
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     batch_size = 64
-    with_pca = False
-    pca_components = None
-    model_class = ASRTwoBranches
+    with_pca = True
+    pca_components = 100
+    model_class = TwoBranches
+    features_num = 256
+    fusion = ConcatinationBasedFusion
     trainer = TrainerTwoBranches(
         dataset=dataset,
         dataset_name=dataset_name,
         model_class=model_class,
+        fusion=fusion,
+        features_num=features_num,
         batch_size=batch_size,
         optimizer_func=optimizer_func,
         optimizer_parameters=optimizer_parameters,
@@ -52,18 +66,7 @@ def main():
         device=device,
     )
     history = trainer.fit()
-
-    evaluator = EvaluatorTwoBranches(
-        dataset=dataset,
-        dataset_name=dataset_name,
-        model_class=model_class,
-        with_pca=with_pca,
-        pca_components=pca_components,
-        batch_size=batch_size,
-        save_path=save_path,
-        device=device,
-    )
-    evaluator.predict()
+    trainer.predict()
 
 
 if __name__ == "__main__":

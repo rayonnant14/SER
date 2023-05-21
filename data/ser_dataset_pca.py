@@ -20,13 +20,13 @@ class SERDatasetPCA(Dataset):
     def __getitem__(self, idx):
         y = self.data["y"][idx]
 
-        if "x" in self.use_keys and "x_opensmile" in self.use_keys:
+        if "x" in self.use_keys and "x_additional" in self.use_keys:
             x = self.data["x"][idx]
-            x_opensmile = torch.from_numpy(self.data["x_opensmile"][idx])
-            return x, x_opensmile, y
+            x_additional = torch.from_numpy(self.data["x_additional"][idx])
+            return x, x_additional, y
         else:
-            x_opensmile = torch.from_numpy(self.data["x_opensmile"][idx])
-            return x_opensmile, y
+            x_additional = torch.from_numpy(self.data["x_additional"][idx])
+            return x_additional, y
 
 
 def load_ser_pca_dataset(data, use_keys=["x", "y"]):

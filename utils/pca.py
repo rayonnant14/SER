@@ -9,30 +9,30 @@ def apply_pca(train_loader, val_loader, batch_size, pca_components=100):
     val = next(iter(val_loader))
 
     if len(train) == 3:
-        x_train, x_opensmile_train, y_train = train
-        x_val, x_opensmile_val, y_val = val
+        x_train, x_additional_train, y_train = train
+        x_val, x_additional_val, y_val = val
     else:
-        x_opensmile_train, y_train = train
-        x_opensmile_val, y_val = val
+        x_additional_train, y_train = train
+        x_additional_val, y_val = val
 
-    x_opensmile_train = x_opensmile_train.view(-1, 988).numpy()
-    x_opensmile_val = x_opensmile_val.view(-1, 988).numpy()
+    x_additional_train = x_additional_train.numpy()
+    x_additional_val = x_additional_val.numpy()
 
     scaler = preprocessing.StandardScaler()
-    x_opensmile_train = scaler.fit_transform(x_opensmile_train)
-    x_opensmile_val = scaler.transform(x_opensmile_val)
+    x_additional_train = scaler.fit_transform(x_additional_train)
+    x_additional_val = scaler.transform(x_additional_val)
     pca = PCA(n_components=pca_components)
-    x_train_pca = pca.fit_transform(x_opensmile_train)
-    x_val_pca = pca.transform(x_opensmile_val)
+    x_train_pca = pca.fit_transform(x_additional_train)
+    x_val_pca = pca.transform(x_additional_val)
     # print(f"explained_variance_ratio_ {pca.explained_variance_ratio_.sum()}")
     if len(train) == 3:
-        train_pca = {"x": x_train, "x_opensmile": x_train_pca, "y": y_train}
-        val_pca = {"x": x_val, "x_opensmile": x_val_pca, "y": y_val}
-        use_keys = ["x", "x_opensmile", "y"]
+        train_pca = {"x": x_train, "x_additional": x_train_pca, "y": y_train}
+        val_pca = {"x": x_val, "x_additional": x_val_pca, "y": y_val}
+        use_keys = ["x", "x_additional", "y"]
     else:
-        train_pca = {"x_opensmile": x_train_pca, "y": y_train}
-        val_pca = {"x_opensmile": x_val_pca, "y": y_val}
-        use_keys = ["x_opensmile", "y"]
+        train_pca = {"x_additional": x_train_pca, "y": y_train}
+        val_pca = {"x_additional": x_val_pca, "y": y_val}
+        use_keys = ["x_additional", "y"]
 
     train_dataset_pca = load_ser_pca_dataset(train_pca, use_keys)
     val_dataset_pca = load_ser_pca_dataset(val_pca, use_keys)
