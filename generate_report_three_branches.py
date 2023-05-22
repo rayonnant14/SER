@@ -1,6 +1,5 @@
 import torch
 
-
 from data import load_ser_dataset
 
 import argparse
@@ -8,8 +7,7 @@ import pandas as pd
 
 from IPython.display import display
 
-from data import configs
-
+from data import configs_three_branches
 from tqdm import tqdm
 
 parser = argparse.ArgumentParser()
@@ -18,8 +16,7 @@ parser.add_argument("--dataset_name", type=str, default="SAVEE")
 parser.add_argument("--save_path", type=str, default="checkpoints/")
 parser.add_argument(
     "--report_drop_path",
-    type=str,
-    default="/Users/polina/Documents/diploma_2023/report.csv",
+    default="/Users/polina/Documents/diploma_2023/report_three_branches.csv",
 )
 parser.add_argument("--num_epochs", type=int, default=20)
 parser.add_argument("--lr", type=float, default=0.001)
@@ -46,7 +43,8 @@ def main():
         "model_class": [],
         "features": [],
         "with_pca": [],
-        "fusion": [],
+        "fusion_first": [],
+        "fusion_second": [],
         "WAR": [],
         "UAR": [],
     }
@@ -60,9 +58,10 @@ def main():
         "save_path": save_path,
         "device": device,
     }
-    with tqdm(total=len(configs)) as pbar:
-        for config in configs:
+    with tqdm(total=len(configs_three_branches)) as pbar:
+        for config in configs_three_branches:
             for with_pca in [False]:
+                print(config["use_keys"])
                 dataset = load_ser_dataset(
                     dataset_path, use_keys=config["use_keys"]
                 )
@@ -84,15 +83,16 @@ def main():
                 )
                 result_dict["features"].append(config["use_keys"])
                 result_dict["with_pca"].append(with_pca)
-                if "fusion" in config["trainer_inputs"]:
-                    result_dict["fusion"].append(
-                        config["trainer_inputs"]["fusion"].__name__
+                result_dict["fusion_first"].append(
+                        config["trainer_inputs"]["fusion_first"].__name__
                     )
-                else:
-                    result_dict["fusion"].append('None')
+                result_dict["fusion_second"].append(
+                        config["trainer_inputs"]["fusion_second"].__name__
+                    )
                 result_dict["WAR"].append(metrics["average_WAR"])
                 result_dict["UAR"].append(metrics["average_UAR"])
             pbar.update(1)
+
     df = pd.DataFrame(data=result_dict)
     display(df)
     df.to_csv(args.report_drop_path)

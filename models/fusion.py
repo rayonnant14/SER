@@ -2,21 +2,25 @@ import torch
 import torch.nn as nn
 from sympy import divisors
 
-
 class ConcatinationBasedFusion(nn.Module):
-    def __init__(self, embedding_first_size, embedding_second_size, class_num):
+    def __init__(self, embedding_first_size, embedding_second_size, class_num,
+                 return_embedding=False):
         super().__init__()
         self.embedding_first_size = embedding_first_size
         self.embedding_second_size = embedding_second_size
-        total_embedding_size = embedding_first_size + embedding_second_size
-        self.classification = nn.Sequential(
-            nn.Linear(total_embedding_size, total_embedding_size // 4),
-            nn.ReLU(),
-            nn.Linear(total_embedding_size // 4, class_num),
-        )
+        self.return_embedding = return_embedding
+        self.total_embedding_size = embedding_first_size + embedding_second_size
+        if not self.return_embedding:
+            self.classification = nn.Sequential(
+                nn.Linear(self.total_embedding_size, self.total_embedding_size // 4),
+                nn.ReLU(),
+                nn.Linear(self.total_embedding_size // 4, class_num),
+            )
 
     def forward(self, embedding_first, embedding_second):
         output = torch.cat([embedding_first, embedding_second], dim=1)
+        if self.return_embedding:
+            return output
         output = self.classification(output)
         return output
 
@@ -28,22 +32,25 @@ class WightedSumBasedFusion(nn.Module):
         embedding_second_size,
         class_num,
         embedding_first_weight=0.5,
+        return_embedding=False
     ):
         super().__init__()
         self.embedding_first_size = embedding_first_size
         self.embedding_second_size = embedding_second_size
         self.embedding_first_weight = embedding_first_weight
         self.embegging_second_weight = 1.0 - embedding_first_weight
+        self.return_embedding = return_embedding
         self.dim_conversion = nn.Linear(
             self.embedding_first_size, self.embedding_second_size
         )
 
-        total_embedding_size = self.embedding_second_size
-        self.classification = nn.Sequential(
-            nn.Linear(total_embedding_size, total_embedding_size // 4),
-            nn.ReLU(),
-            nn.Linear(total_embedding_size // 4, class_num),
-        )
+        self.total_embedding_size = self.embedding_second_size
+        if not self.return_embedding:
+            self.classification = nn.Sequential(
+                nn.Linear(self.total_embedding_size, self.total_embedding_size // 4),
+                nn.ReLU(),
+                nn.Linear(self.total_embedding_size // 4, class_num),
+            )
 
     def forward(self, embedding_first, embedding_second):
         embedding_first = self.dim_conversion(embedding_first)
@@ -51,9 +58,11 @@ class WightedSumBasedFusion(nn.Module):
             self.embedding_first_weight * embedding_first,
             self.embegging_second_weight * embedding_second,
         )
-
-        output = self.classification(sum)
-        return output
+        if self.return_embedding:
+            return sum
+        else:
+            output = self.classification(sum)
+            return output
 
 
 class WeighedFusionV1(nn.Module):
@@ -62,10 +71,12 @@ class WeighedFusionV1(nn.Module):
         embedding_first_size,
         embedding_second_size,
         class_num,
+        return_embedding=False
     ):
         super().__init__()
         self.embedding_first_size = embedding_first_size
         self.embedding_second_size = embedding_second_size
+        self.return_embedding = return_embedding
         self.dim_conversion = nn.Linear(
             self.embedding_first_size,
             self.embedding_second_size,
@@ -73,13 +84,13 @@ class WeighedFusionV1(nn.Module):
         self.aggregation_layer = torch.nn.Conv1d(
             in_channels=2, out_channels=1, kernel_size=1
         )
-        total_embedding_size = self.embedding_second_size
-
-        self.classification = nn.Sequential(
-            nn.Linear(total_embedding_size, total_embedding_size // 4),
-            nn.ReLU(),
-            nn.Linear(total_embedding_size // 4, class_num),
-        )
+        self.total_embedding_size = self.embedding_second_size
+        if not self.return_embedding:
+            self.classification = nn.Sequential(
+                nn.Linear(self.total_embedding_size, self.total_embedding_size // 4),
+                nn.ReLU(),
+                nn.Linear(self.total_embedding_size // 4, class_num),
+            )
 
     def forward(self, embedding_first, embedding_second):
         embedding_first = self.dim_conversion(embedding_first)
@@ -98,8 +109,11 @@ class WeighedFusionV1(nn.Module):
         weighed_embeggings = weighed_embeggings.reshape(
             weighed_embeggings.size(0), -1
         )
-        output = self.classification(weighed_embeggings)
-        return output
+        if self.return_embedding:
+            return weighed_embeggings
+        else:
+            output = self.classification(weighed_embeggings)
+            return output
 
 
 class WeighedFusionV2(nn.Module):
@@ -108,10 +122,12 @@ class WeighedFusionV2(nn.Module):
         embedding_first_size,
         embedding_second_size,
         class_num,
+        return_embedding=False
     ):
         super().__init__()
         self.embedding_first_size = embedding_first_size
         self.embedding_second_size = embedding_second_size
+        self.return_embedding = return_embedding
         self.dim_conversion = nn.Linear(
             self.embedding_first_size,
             self.embedding_second_size,
@@ -123,13 +139,13 @@ class WeighedFusionV2(nn.Module):
             torch.randn(self.embedding_second_size)
         )
 
-        total_embedding_size = self.embedding_second_size
-
-        self.classification = nn.Sequential(
-            nn.Linear(total_embedding_size, total_embedding_size // 4),
-            nn.ReLU(),
-            nn.Linear(total_embedding_size // 4, class_num),
-        )
+        self.total_embedding_size = self.embedding_second_size
+        if not self.return_embedding:
+            self.classification = nn.Sequential(
+                nn.Linear(self.total_embedding_size, self.total_embedding_size // 4),
+                nn.ReLU(),
+                nn.Linear(self.total_embedding_size // 4, class_num),
+            )
 
     def forward(self, embedding_first, embedding_second):
         embedding_first = self.dim_conversion(embedding_first)
@@ -141,8 +157,11 @@ class WeighedFusionV2(nn.Module):
             embedding_first * weight_first_sigmoid,
             embedding_second * weight_second_sigmoid,
         )
-        output = self.classification(sum)
-        return output
+        if self.return_embedding:
+            return sum
+        else:
+            output = self.classification(sum)
+            return output
 
 
 class MulFusion(nn.Module):
@@ -151,28 +170,33 @@ class MulFusion(nn.Module):
         embedding_first_size,
         embedding_second_size,
         class_num,
+        return_embedding=False
     ):
         super().__init__()
         self.embedding_first_size = embedding_first_size
         self.embedding_second_size = embedding_second_size
+        self.return_embedding = return_embedding
         self.dim_conversion = nn.Linear(
             self.embedding_first_size,
             self.embedding_second_size,
         )
-        total_embedding_size = self.embedding_second_size
-
-        self.classification = nn.Sequential(
-            nn.Linear(total_embedding_size, total_embedding_size // 4),
-            nn.ReLU(),
-            nn.Linear(total_embedding_size // 4, class_num),
-        )
+        self.total_embedding_size = self.embedding_second_size
+        if not self.return_embedding:
+            self.classification = nn.Sequential(
+                nn.Linear(self.total_embedding_size, self.total_embedding_size // 4),
+                nn.ReLU(),
+                nn.Linear(self.total_embedding_size // 4, class_num),
+            )
 
     def forward(self, embedding_first, embedding_second):
         embedding_first = self.dim_conversion(embedding_first)
 
         mul = torch.mul(embedding_first, embedding_second)
-        output = self.classification(mul)
-        return output
+        if self.return_embedding:
+            return mul
+        else:
+            output = self.classification(mul)
+            return output
 
 
 class WeighedMulFusion(nn.Module):
@@ -181,27 +205,33 @@ class WeighedMulFusion(nn.Module):
         embedding_first_size,
         embedding_second_size,
         class_num,
+        return_embedding=False
     ):
         super().__init__()
         self.embedding_first_size = embedding_first_size
         self.embedding_second_size = embedding_second_size
+        self.return_embedding = return_embedding
         self.weight_matrix = nn.Parameter(
             torch.randn(embedding_second_size, embedding_first_size)
         )
 
-        total_embedding_size = embedding_first_size
-        self.classification = nn.Sequential(
-            nn.Linear(total_embedding_size, total_embedding_size // 4),
-            nn.ReLU(),
-            nn.Linear(total_embedding_size // 4, class_num),
-        )
+        self.total_embedding_size = embedding_first_size
+        if not self.return_embedding:
+            self.classification = nn.Sequential(
+                nn.Linear(self.total_embedding_size, self.total_embedding_size // 4),
+                nn.ReLU(),
+                nn.Linear(self.total_embedding_size // 4, class_num),
+            )
 
     def forward(self, embedding_first, embedding_second):
         embedding_second = torch.matmul(embedding_second, self.weight_matrix)
 
         mul = torch.mul(embedding_first, embedding_second)
-        output = self.classification(mul)
-        return output
+        if self.return_embedding:
+            return mul
+        else:
+            output = self.classification(mul)
+            return output
 
 
 class AttentionBasedFusion(nn.Module):
@@ -210,10 +240,12 @@ class AttentionBasedFusion(nn.Module):
         embedding_first_size,
         embedding_second_size,
         class_num,
+        return_embedding=False
     ):
         super().__init__()
         self.embedding_first_size = embedding_first_size
         self.embedding_second_size = embedding_second_size
+        self.return_embedding = return_embedding
         self.dim_conversion = nn.Linear(
             self.embedding_first_size,
             self.embedding_second_size,
@@ -223,13 +255,13 @@ class AttentionBasedFusion(nn.Module):
         self.multihead_attn = nn.MultiheadAttention(
             embed_dim=self.embedding_second_size, num_heads=num_heads
         )
-        print(num_heads)
-        total_embedding_size = self.embedding_second_size
-        self.classification = nn.Sequential(
-            nn.Linear(total_embedding_size, total_embedding_size // 4),
-            nn.ReLU(),
-            nn.Linear(total_embedding_size // 4, class_num),
-        )
+        self.total_embedding_size = self.embedding_second_size
+        if not self.return_embedding:
+            self.classification = nn.Sequential(
+                nn.Linear(self.total_embedding_size, self.total_embedding_size // 4),
+                nn.ReLU(),
+                nn.Linear(self.total_embedding_size // 4, class_num),
+            )
 
     def forward(self, embedding_first, embedding_second):
         embedding_first = self.dim_conversion(embedding_first)
@@ -249,8 +281,11 @@ class AttentionBasedFusion(nn.Module):
             need_weights=False,
         )
         attn_output = attn_output.reshape(attn_output.size(0), -1)
-        output = self.classification(attn_output)
-        return output
+        if self.return_embedding:
+            return attn_output
+        else:
+            output = self.classification(attn_output)
+            return output
 
 
 class LateFusionV1(nn.Module):

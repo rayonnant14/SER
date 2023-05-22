@@ -28,7 +28,7 @@ class Base(ABC):
         self.model_class = model_class
         self.batch_size = batch_size
         self.device = device
-        self.n_splits = 10
+        self.n_splits = 5
         self.random_state = 42
         self.with_pca = with_pca
         self.pca_components = pca_components
