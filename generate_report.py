@@ -94,6 +94,7 @@ def main():
                 result_dict["UAR"].append(metrics["average_UAR"])
             pbar.update(1)
     df = pd.DataFrame(data=result_dict)
+    df = df.sort_values(by='UAR', ascending=False)
     display(df)
     df.to_csv(args.report_drop_path)
 
