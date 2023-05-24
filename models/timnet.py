@@ -104,7 +104,7 @@ class TIMNET(nn.Module):
     def __init__(
         self,
         class_num,
-        nb_filters=196,
+        nb_filters=39,
         kernel_size=2,
         nb_stacks=1,
         dilations=8,
@@ -199,7 +199,7 @@ class TIMNETClassification(nn.Module):
     def __init__(
         self,
         class_num,
-        nb_filters=196,
+        nb_filters=39,
         kernel_size=2,
         nb_stacks=1,
         dilations=8,
