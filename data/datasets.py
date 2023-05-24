@@ -48,6 +48,18 @@ DATASETS = {
             "neutral",
         ],
     },
+    "EMOVO": {
+        "num_classes": 7,
+        "target_names": [
+            "disgust",
+            "joy",
+            "fear",
+            "anger",
+            "surprise",
+            "sad",
+            "neutral",
+        ],
+    },
     "RAVDESS": {
         "num_classes": 8,
         "target_names": [

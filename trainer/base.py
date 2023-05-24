@@ -28,7 +28,7 @@ class Base(ABC):
         self.model_class = model_class
         self.batch_size = batch_size
         self.device = device
-        self.n_splits = 5
+        self.n_splits = 10
         self.random_state = 42
         self.with_pca = with_pca
         self.pca_components = pca_components
@@ -52,7 +52,7 @@ class Base(ABC):
         images, labels = images.to(self.device), labels.to(self.device)
         out = model.forward(images)
         return labels, out
-    
+
     def process_dataloader(self, train_sampler, val_sampler):
         train_loader = DataLoader(
             self.dataset,
@@ -65,7 +65,7 @@ class Base(ABC):
             sampler=val_sampler,
         )
         return train_loader, val_loader
-    
+
     @torch.no_grad()
     def evaluate(self, model, val_loader, report=False):
         self.eval_mode_on(model)
@@ -85,11 +85,12 @@ class Base(ABC):
             report = classification_report(
                 labels_all,
                 preds_all,
+                labels=np.arange(
+                    0, len(self.dataset_description["target_names"]), 1
+                ),
                 target_names=self.dataset_description["target_names"],
             )
             metrics = {"WAR": war, "UAR": uar, "report": report}
         else:
             metrics = {"WAR": war, "UAR": uar}
         return metrics
-
-    

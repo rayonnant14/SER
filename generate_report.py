@@ -9,7 +9,7 @@ import pandas as pd
 from IPython.display import display
 
 from data import configs
-
+from data import configs_timnet
 from tqdm import tqdm
 
 parser = argparse.ArgumentParser()
@@ -60,8 +60,8 @@ def main():
         "save_path": save_path,
         "device": device,
     }
-    with tqdm(total=len(configs)) as pbar:
-        for config in configs:
+    with tqdm(total=len(configs_timnet)) as pbar:
+        for config in configs_timnet:
             for with_pca in [False]:
                 dataset = load_ser_dataset(
                     dataset_path, use_keys=config["use_keys"]
