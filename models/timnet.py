@@ -158,13 +158,13 @@ class TIMNET(nn.Module):
             self.pooling.append(nn.AdaptiveAvgPool1d(1))
         self.flatten_1 = nn.Flatten(start_dim=-2, end_dim=-1)
 
-        self.weight_layer = nn.Conv1d(
-            in_channels=self.dilations, out_channels=1, kernel_size=1
-        )
-        # self.weight_layer = nn.Parameter(
-        #     torch.randn(self.dilations, self.nb_filters)
+        # self.weight_layer = nn.Conv1d(
+        #     in_channels=self.dilations, out_channels=1, kernel_size=1
         # )
-        self.flatten_2 = nn.Flatten(start_dim=-2, end_dim=-1)
+        self.weight_layer = nn.Parameter(
+            torch.randn(self.dilations, self.nb_filters)
+        )
+        # self.flatten_2 = nn.Flatten(start_dim=-2, end_dim=-1)
         # self.fc = nn.Linear(nb_filters, class_num)
         # self.softmax = nn.Softmax(dim=1)
 
@@ -191,9 +191,9 @@ class TIMNET(nn.Module):
             final_skip_connection.append(temp_skip)
 
         output = torch.cat(final_skip_connection, dim=-2)
-        output = self.weight_layer(output)
-        # output = torch.sum(torch.mul(output, self.weight_layer), dim=1)
-        output = self.flatten_2(output)
+        # output = self.weight_layer(output)
+        output = torch.sum(torch.mul(output, self.weight_layer), dim=1)
+        # output = self.flatten_2(output)
         # output = self.fc(output)
         # x = self.softmax(x)
         return output
