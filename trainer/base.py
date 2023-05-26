@@ -5,6 +5,7 @@ import torch.nn as nn
 import numpy as np
 
 from torch.utils.data import DataLoader
+from torch.utils.data.dataset import Subset
 from data.datasets import DATASETS
 
 from sklearn.metrics import recall_score, accuracy_score, classification_report
@@ -53,16 +54,16 @@ class Base(ABC):
         out = model.forward(images)
         return labels, out
 
-    def process_dataloader(self, train_sampler, val_sampler):
+    def process_dataloader(self, train_idx, val_idx):
+        train_set = Subset(self.dataset, train_idx)
+        val_set = Subset(self.dataset, val_idx)
         train_loader = DataLoader(
-            self.dataset,
+            train_set,
             batch_size=self.batch_size,
-            sampler=train_sampler,
         )
         val_loader = DataLoader(
-            self.dataset,
+            val_set,
             batch_size=self.batch_size,
-            sampler=val_sampler,
         )
         return train_loader, val_loader
 

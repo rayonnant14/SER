@@ -66,10 +66,10 @@ class TrainerClassification(Base):
                 print(f"Process fold {fold}")
                 self.best_uar = 0.0
                 history = []
-                train_sampler = SubsetRandomSampler(train_idx)
-                val_sampler = SubsetRandomSampler(val_idx)
+                # train_sampler = SubsetRandomSampler(train_idx)
+                # val_sampler = SubsetRandomSampler(val_idx)
                 train_loader, val_loader = self.process_dataloader(
-                    train_sampler, val_sampler
+                    train_idx, val_idx
                 )
                 model = self.load_model()
                 model.to(self.device)
@@ -106,11 +106,11 @@ class TrainerClassification(Base):
                 splits.split(np.arange(len(self.dataset)))
             ):
                 print(f"Process fold {fold}")
-                train_sampler = SubsetRandomSampler(train_idx)
-                val_sampler = SubsetRandomSampler(val_idx)
+                # train_sampler = SubsetRandomSampler(train_idx)
+                # val_sampler = SubsetRandomSampler(val_idx)
 
                 _, val_loader = self.process_dataloader(
-                    train_sampler, val_sampler
+                    train_idx, val_idx
                 )
                 model = self.load_model()
                 self.load_model_weights(model, fold)
