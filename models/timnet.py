@@ -6,7 +6,7 @@ from typing import Optional
 from typing import Union
 
 
-class CausalConv1d(nn.Conv1d):
+class CausalConv1d(nn.Module):
     def __init__(
         self,
         in_channels,
@@ -17,23 +17,23 @@ class CausalConv1d(nn.Conv1d):
         groups=1,
         bias=True,
     ):
-        super(CausalConv1d, self).__init__(
+        super().__init__()
+        self.conv1d = nn.Conv1d(
             in_channels,
             out_channels,
             kernel_size=kernel_size,
             stride=stride,
-            padding=0,
+            padding=(kernel_size - 1) * dilation,
             dilation=dilation,
             groups=groups,
             bias=bias,
         )
 
-        self.__padding = (kernel_size - 1) * dilation
-
     def forward(self, input):
-        return super(CausalConv1d, self).forward(
-            F.pad(input, (self.__padding, 0))
-        )
+        output = self.conv1d.forward(input)
+        shift = -self.conv1d.padding[0] if self.conv1d.padding[0] != 0 else None
+        output = output[:, :, :shift]
+        return output
 
 
 class SpatialDropout(torch.nn.Module):
@@ -117,19 +117,19 @@ class TIMNET(nn.Module):
         self.kernel_size = kernel_size
         self.nb_filters = nb_filters
 
-        self.forward_convd = nn.Conv1d(
+        self.forward_convd = CausalConv1d(
             in_channels=nb_filters,
             out_channels=self.nb_filters,
             kernel_size=1,
             dilation=1,
-            padding=0,
+            # padding=0,
         )
-        self.backward_convd = nn.Conv1d(
+        self.backward_convd = CausalConv1d(
             in_channels=nb_filters,
             out_channels=self.nb_filters,
             kernel_size=1,
             dilation=1,
-            padding=0,
+            # padding=0,
         )
         self.skip_out_forwards = nn.Sequential()
         self.skip_out_backwards = nn.Sequential()
@@ -162,7 +162,7 @@ class TIMNET(nn.Module):
         #     in_channels=self.dilations, out_channels=1, kernel_size=1
         # )
         self.weight_layer = nn.Parameter(
-            torch.randn(self.dilations, self.nb_filters)
+            torch.randn(self.dilations, 1)
         )
         # self.flatten_2 = nn.Flatten(start_dim=-2, end_dim=-1)
         # self.fc = nn.Linear(nb_filters, class_num)

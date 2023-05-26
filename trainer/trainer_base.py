@@ -42,7 +42,7 @@ class TrainerClassification(Base):
         )
 
     def save_best_model(self, model, val_uar, fold):
-        if val_uar > self.best_uar:
+        if val_uar >= self.best_uar:
             self.best_uar = val_uar
             torch.save(
                 model.state_dict(),
