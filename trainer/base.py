@@ -30,7 +30,8 @@ class Base(ABC):
         self.batch_size = batch_size
         self.device = device
         self.n_splits = 10
-        self.random_state = 42
+        self.random_state = self.dataset_description["seed"]
+        self.dilations = self.dataset_description["dilations"]
         self.with_pca = with_pca
         self.pca_components = pca_components
         check_if_exist(save_path + "/" + dataset_name)
@@ -39,6 +40,7 @@ class Base(ABC):
     def load_model(self):
         model = self.model_class(
             class_num=self.dataset_description["num_classes"],
+            dilations=self.dilations
         )
         return model
 

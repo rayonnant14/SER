@@ -9,6 +9,7 @@ class TrainerTwoBranches(TrainerOneBranch):
     def load_model(self):
         model = self.model_class(
             class_num=self.dataset_description["num_classes"],
+            dilations=self.dilations,
             features_num=self.features_num,
             fusion=self.fusion,
             with_pca=self.with_pca,
