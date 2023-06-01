@@ -1,60 +1,30 @@
-from abc import ABC, abstractmethod
+from trainer import Base
 
 import torch
-import torch.nn as nn
 import numpy as np
+
 from torch.utils.data import DataLoader, SubsetRandomSampler
 from sklearn.model_selection import KFold
-
-from utils.metrics import accuracy
-from utils.misc import check_if_exist
-
-from data.datasets import DATASETS
 
 from tqdm import tqdm
 
 
-class TrainerClassification(ABC):
+class TrainerClassification(Base):
     def __init__(
         self,
-        dataset: torch.utils.data.Dataset,
-        dataset_name: str,
-        model_class: nn.Module,
-        batch_size: int,
         optimizer_func,
         optimizer_parameters,
         criterion,
         num_epochs: int,
-        save_path: str,
-        device=None,
+        *args,
+        **kwargs,
     ):
-        self.dataset = dataset
-        self.dataset_description = DATASETS[dataset_name]
-        self.model_class = model_class
-        self.batch_size = batch_size
-        self.device = device
+        super().__init__(*args, **kwargs)
         self.optimizer_func = optimizer_func
         self.optimizer_parameters = optimizer_parameters
         self.criterion = criterion
         self.epochs = num_epochs
-        self.best_accuracy = 0.0
-        self.n_splits = 10
-        self.random_state = 42
-
-        check_if_exist(save_path + "/" + dataset_name)
-        self.save_path = save_path + "/" + dataset_name + "/"
-
-    def load_model(self):
-        model = self.model_class(
-            class_num=self.dataset_description["num_classes"]
-        )
-        return model
-
-    def train_mode_on(self, model):
-        model.train()
-
-    def eval_mode_on(self, model):
-        model.eval()
+        self.best_uar = 0.0
 
     def training_step(self, model, batch):
         images, labels = batch
@@ -64,38 +34,27 @@ class TrainerClassification(ABC):
         loss.backward()
         return loss
 
-    def validation_step(self, model, batch):
-        images, labels = batch
-        images, labels = images.to(self.device), labels.to(self.device)
-        out = model.forward(images)
-        acc = accuracy(out, labels)
-        return {"val_acc": acc}
-
-    def validation_epoch_end(self, outputs):
-        batch_accs = [x["val_acc"] for x in outputs]
-        epoch_acc = torch.stack(batch_accs).mean()
-        return {"val_acc": epoch_acc.item()}
-
     def epoch_end(self, epoch, result):
-        print(
-            "Epoch [{}], train_loss: {:.4f}, val_acc: {:.4f}".format(
-                epoch, result["train_loss"], result["val_acc"]
+        if epoch % 50 == 0 or epoch == self.epochs - 1:
+            print(
+                "Epoch [{}], train_loss: {:.4f}, val_UAR: {:.4f}, val_WAR: {:.4f}".format(
+                    epoch, result["train_loss"], result["UAR"], result["WAR"]
+                )
             )
-        )
 
-    def save_best_model(self, model, val_accuracy, fold):
-        if val_accuracy > self.best_accuracy:
-            self.best_accuracy = val_accuracy
+    def save_best_model(self, model, val_uar, fold):
+        if val_uar >= self.best_uar:
+            self.best_uar = val_uar
             torch.save(
                 model.state_dict(),
-                self.save_path + "timnet_" + str(fold) + ".pth",
+                self.save_path + model.get_name() + "_" + str(fold) + ".pth",
             )
 
-    @torch.no_grad()
-    def evaluate(self, model, val_loader):
-        self.eval_mode_on(model)
-        outputs = [self.validation_step(model, batch) for batch in val_loader]
-        return self.validation_epoch_end(outputs)
+    def load_model_weights(self, model, fold):
+        model_path = (
+            self.save_path + model.get_name() + "_" + str(fold) + ".pth"
+        )
+        model.load_state_dict(torch.load(model_path))
 
     def fit(self):
         splits = KFold(
@@ -106,19 +65,12 @@ class TrainerClassification(ABC):
                 splits.split(np.arange(len(self.dataset)))
             ):
                 print(f"Process fold {fold}")
-                self.best_accuracy = 0.0
+                self.best_uar = 0.0
                 history = []
-                train_sampler = SubsetRandomSampler(train_idx)
-                val_sampler = SubsetRandomSampler(val_idx)
-                train_loader = DataLoader(
-                    self.dataset,
-                    batch_size=self.batch_size,
-                    sampler=train_sampler,
-                )
-                val_loader = DataLoader(
-                    self.dataset,
-                    batch_size=self.batch_size,
-                    sampler=val_sampler,
+                # train_sampler = SubsetRandomSampler(train_idx)
+                # val_sampler = SubsetRandomSampler(val_idx)
+                train_loader, val_loader = self.process_dataloader(
+                    train_idx, val_idx
                 )
                 model = self.load_model()
                 model.to(self.device)
@@ -140,7 +92,46 @@ class TrainerClassification(ABC):
                         torch.stack(train_losses).mean().item()
                     )
                     self.epoch_end(epoch, result)
-                    self.save_best_model(model, result["val_acc"], fold)
+                    self.save_best_model(model, result["UAR"], fold)
                     history.append(result)
                 pbar.update(1)
+
+    def predict(self):
+        splits = KFold(
+            n_splits=self.n_splits, shuffle=True, random_state=self.random_state
+        )
+        average_WAR = 0.0
+        average_UAR = 0.0
+        with tqdm(total=self.n_splits) as pbar:
+            for fold, (train_idx, val_idx) in enumerate(
+                splits.split(np.arange(len(self.dataset)))
+            ):
+                print(f"Process fold {fold}")
+                # train_sampler = SubsetRandomSampler(train_idx)
+                # val_sampler = SubsetRandomSampler(val_idx)
+
+                _, val_loader = self.process_dataloader(
+                    train_idx, val_idx
+                )
+                model = self.load_model()
+                self.load_model_weights(model, fold)
+                model.to(self.device)
+                self.eval_mode_on(model)
+                metrics = self.evaluate(model, val_loader, report=True)
+                print(metrics["report"])
+                average_WAR += metrics["WAR"]
+                average_UAR += metrics["UAR"]
+                pbar.update(1)
                 # yield history
+        average_WAR /= self.n_splits
+        average_UAR /= self.n_splits
+        average_WAR_perc = average_WAR * 100.0
+        average_UAR_perc = average_UAR * 100.0
+        print(
+            f"average_UAR: {average_UAR_perc:.2f} %, average_WAR: {average_WAR_perc:.2f} %",
+        )
+        return {
+            "average_UAR": round(average_UAR_perc, 2),
+            "average_WAR": round(average_WAR_perc, 2),
+        }
+        # yield history
