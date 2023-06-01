@@ -5,7 +5,16 @@ import torch.nn.functional as F
 from typing import Optional
 from typing import Union
 
+class Pad(nn.Module):
+    def __init__(self, pad_size):
+        super().__init__()
+        self.pad_size = pad_size
 
+    def forward(self, x):
+        if self.pad_size != 0:
+            x = x[:, :, :-self.pad_size].contiguous()
+        return x
+    
 class CausalConv1d(nn.Module):
     def __init__(
         self,
@@ -18,7 +27,9 @@ class CausalConv1d(nn.Module):
         bias=True,
     ):
         super().__init__()
-        self.conv1d = nn.Conv1d(
+        self.padding = (kernel_size - 1) * dilation
+
+        self.conv1d = nn.utils.weight_norm(nn.Conv1d(
             in_channels,
             out_channels,
             kernel_size=kernel_size,
@@ -27,12 +38,14 @@ class CausalConv1d(nn.Module):
             dilation=dilation,
             groups=groups,
             bias=bias,
-        )
+        ), name="weight")
+
+        self.pad = Pad(self.padding)
+        self.causal_conv = nn.Sequential(self.conv1d, self.pad)
+        self.conv1d.weight.data.normal_(0, 0.01)
 
     def forward(self, input):
-        output = self.conv1d.forward(input)
-        shift = -self.conv1d.padding[0] if self.conv1d.padding[0] != 0 else None
-        output = output[:, :, :shift]
+        output = self.causal_conv.forward(input)
         return output
 
 
@@ -61,7 +74,7 @@ class SpatialDropout(torch.nn.Module):
 
 
 class Temporal_Aware_Block(nn.Module):
-    def __init__(self, s, i, nb_filters, kernel_size, dropout_rate=0):
+    def __init__(self, s, i, nb_filters, kernel_size, dropout_rate=0.1):
         super().__init__()
         self.s = s
         self.i = i
@@ -75,7 +88,8 @@ class Temporal_Aware_Block(nn.Module):
                 kernel_size=self.kernel_size,
                 dilation=self.i,
             ),
-            nn.BatchNorm1d(num_features=self.nb_filters),
+            nn.GroupNorm(num_groups=1, num_channels=self.nb_filters, eps=1e-5),
+            # nn.BatchNorm1d(num_features=self.nb_filters),
             nn.ReLU(),
             SpatialDropout(dropout_probability=self.dropout_rate),
         )
@@ -86,16 +100,18 @@ class Temporal_Aware_Block(nn.Module):
                 kernel_size=self.kernel_size,
                 dilation=self.i,
             ),
-            nn.BatchNorm1d(num_features=self.nb_filters),
+            nn.GroupNorm(num_groups=1, num_channels=self.nb_filters, eps=1e-5),
+            # nn.BatchNorm1d(num_features=self.nb_filters),
             nn.ReLU(),
             SpatialDropout(dropout_probability=self.dropout_rate),
         )
+        self.sigmoid = torch.nn.Sigmoid()
 
     def forward(self, x):
         original_x = x
         output_1 = self.block_1(x)
         output_2 = self.block_2(output_1)
-        output = torch.sigmoid(output_2)
+        output = self.sigmoid(output_2)
         F_x = torch.mul(original_x, output)
         return F_x
 
@@ -170,7 +186,7 @@ class TIMNET(nn.Module):
 
     def forward(self, x):
         forward = x
-        backward = torch.flip(x, [1])
+        backward = torch.flip(x, [2])
 
         forward_convd = self.forward_convd(forward)
         backward_convd = self.backward_convd(backward)
@@ -218,10 +234,12 @@ class TIMNETClassification(nn.Module):
             dilations=dilations,
             dropout_rate=dropout_rate,
         )
+        self.activation = nn.ReLU()
         self.FC = nn.Linear(nb_filters, class_num)
 
     def forward(self, x):
         output = self.TIMNET(x)
+        output = self.activation(output)
         output = self.FC(output)
         return output
 

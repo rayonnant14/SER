@@ -35,11 +35,12 @@ class TrainerClassification(Base):
         return loss
 
     def epoch_end(self, epoch, result):
-        print(
-            "Epoch [{}], train_loss: {:.4f}, val_UAR: {:.4f}, val_WAR: {:.4f}".format(
-                epoch, result["train_loss"], result["UAR"], result["WAR"]
+        if epoch % 50 == 0 or epoch == self.epochs - 1:
+            print(
+                "Epoch [{}], train_loss: {:.4f}, val_UAR: {:.4f}, val_WAR: {:.4f}".format(
+                    epoch, result["train_loss"], result["UAR"], result["WAR"]
+                )
             )
-        )
 
     def save_best_model(self, model, val_uar, fold):
         if val_uar >= self.best_uar:
@@ -114,8 +115,8 @@ class TrainerClassification(Base):
                 )
                 model = self.load_model()
                 self.load_model_weights(model, fold)
-                self.eval_mode_on(model)
                 model.to(self.device)
+                self.eval_mode_on(model)
                 metrics = self.evaluate(model, val_loader, report=True)
                 print(metrics["report"])
                 average_WAR += metrics["WAR"]

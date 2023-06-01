@@ -16,22 +16,12 @@ from models import (
     LateFusionV2,
 )
 
-configs_timnet = [
+configs = [
     {
-        "trainer": TrainerOneBranch,
-        "use_keys": ["x_asr", "y"],
+        "trainer": TrainerClassification,
+        "use_keys": ["x", "y"],
         "trainer_inputs": {
-             "features_num": 1024,
-              "model_class": AdditionalFeatureClassification,
-        }
-    },
-    {
-        "trainer": TrainerTwoBranches,
-        "use_keys": ["x", "x_asr", "y"],
-        "trainer_inputs": {
-            "features_num": 1024,
-            "fusion": ConcatinationBasedFusion,
-            "model_class": TwoBranchesClassification,
+            "model_class": TIMNETClassification,
         },
-    },
+    }
 ]

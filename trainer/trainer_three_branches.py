@@ -13,6 +13,7 @@ class TrainerThreeBranches(TrainerOneBranch):
     def load_model(self):
         model = self.model_class(
             class_num=self.dataset_description["num_classes"],
+            dilations=self.dilations,
             features_num_first=self.features_num,
             features_num_second=self.features_num_second,
             fusion_first=self.fusion_first,
