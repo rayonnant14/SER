@@ -34,7 +34,7 @@ class CausalConv1d(nn.Module):
             out_channels,
             kernel_size=kernel_size,
             stride=stride,
-            padding=(kernel_size - 1) * dilation,
+            padding=self.padding,
             dilation=dilation,
             groups=groups,
             bias=bias,
@@ -88,7 +88,7 @@ class Temporal_Aware_Block(nn.Module):
                 kernel_size=self.kernel_size,
                 dilation=self.i,
             ),
-            nn.GroupNorm(num_groups=1, num_channels=self.nb_filters, eps=1e-5),
+            nn.GroupNorm(num_groups=1, num_channels=self.nb_filters, eps=1e-8),
             # nn.BatchNorm1d(num_features=self.nb_filters),
             nn.ReLU(),
             SpatialDropout(dropout_probability=self.dropout_rate),
@@ -100,7 +100,7 @@ class Temporal_Aware_Block(nn.Module):
                 kernel_size=self.kernel_size,
                 dilation=self.i,
             ),
-            nn.GroupNorm(num_groups=1, num_channels=self.nb_filters, eps=1e-5),
+            nn.GroupNorm(num_groups=1, num_channels=self.nb_filters, eps=1e-8),
             # nn.BatchNorm1d(num_features=self.nb_filters),
             nn.ReLU(),
             SpatialDropout(dropout_probability=self.dropout_rate),
@@ -123,7 +123,7 @@ class TIMNET(nn.Module):
         nb_filters=39,
         kernel_size=2,
         nb_stacks=1,
-        dilations=8,
+        dilations=None,
         dropout_rate=0.1,
     ):
         super(TIMNET, self).__init__()
@@ -222,7 +222,7 @@ class TIMNETClassification(nn.Module):
         nb_filters=39,
         kernel_size=2,
         nb_stacks=1,
-        dilations=8,
+        dilations=None,
         dropout_rate=0.1,
     ):
         super().__init__()

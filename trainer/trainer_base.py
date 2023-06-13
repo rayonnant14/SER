@@ -37,8 +37,8 @@ class TrainerClassification(Base):
     def epoch_end(self, epoch, result):
         if epoch % 50 == 0 or epoch == self.epochs - 1:
             print(
-                "Epoch [{}], train_loss: {:.4f}, val_UAR: {:.4f}, val_WAR: {:.4f}".format(
-                    epoch, result["train_loss"], result["UAR"], result["WAR"]
+                "Epoch [{}], train_loss: {:.4f}, val_UAR: {:.4f}, val_WAR: {:.4f}, best_UAR: {:.4f}".format(
+                    epoch, result["train_loss"], result["UAR"], result["WAR"], self.best_uar
                 )
             )
 
@@ -91,8 +91,9 @@ class TrainerClassification(Base):
                     result["train_loss"] = (
                         torch.stack(train_losses).mean().item()
                     )
-                    self.epoch_end(epoch, result)
                     self.save_best_model(model, result["UAR"], fold)
+                    self.epoch_end(epoch, result)
+                    
                     history.append(result)
                 pbar.update(1)
 
