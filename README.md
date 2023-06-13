@@ -7,6 +7,9 @@ The models were tested on 4 datasets:
 - EmoDB
 - EMOVO
 
+All data is available on Google Drive: https://drive.google.com/drive/folders/1kQ3H61FS0CLNkG0YC5SrLDyC-b4eNgus?usp=sharing
+
+
 To check all experiments run the following command
 ```
 python3 ./generate_report.py --dataset_path PATH_TO_DATASET_IN_NPY_FORMAT --num_epochs 300 --dataset_name DATASET_NAME --config configs
